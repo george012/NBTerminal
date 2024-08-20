@@ -16,7 +16,7 @@ import (
 
 const (
 	ProjectName        = "NBTerminal"
-	ProjectVersion     = "v0.0.2"
+	ProjectVersion     = "v0.0.3"
 	ProjectBundleID    = "com.NBTerminal.NBTerminal"
 	ProjectDescription = "NB Terminal"
 	APIPortDefault     = 8765
