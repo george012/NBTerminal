@@ -1,0 +1,67 @@
+name: windows_build_test
+
+env:
+  ProductName: NBTerminal
+  UPLOAD_TMP_DIR: ./build/upload_tmp_dir
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest]
+        arch: [ amd64, arm64 ]
+        exclude:
+          - os: windows-latest
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.18.0'
+
+      - name: Install Windows MSYS2 using choco
+        if: matrix.os == 'windows-latest'
+        run: choco install msys2 --params "/InstallDir=C:\msys64"
+
+      - name: Setup Windows MSYS2 and install dependencies
+        if: matrix.os == 'windows-latest'
+        run: |
+          C:\msys64\usr\bin\bash -lc "pacman -Sy --noconfirm && pacman -S --noconfirm base-devel mingw-w64-x86_64-toolchain mingw-w64-x86_64-cmake mingw-w64-x86_64-openssl"
+          echo "C:\\msys64\\mingw64\\bin" >> $GITHUB_ENV
+          echo "C:\\msys64\\usr\\bin" >> $GITHUB_ENV
+
+      - name: Setup Mesa
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          mkdir -p ./mesa
+          curl -L -o ./mesa/mesa3d-24.1.2-release-msvc.7z https://github.com/pal1000/mesa-dist-win/releases/download/24.1.2/mesa3d-24.1.2-release-msvc.7z
+          
+          cd ./mesa
+          7z x mesa3d-24.1.2-release-msvc.7z
+          
+          if [ -f /c/Windows/System32/opengl32.dll ]; then
+            mv /c/Windows/System32/opengl32.dll /c/Windows/System32/opengl32.dll.bak
+          fi
+          if [ -f /c/Windows/System32/libglapi.dll ]; then
+            mv /c/Windows/System32/libglapi.dll /c/Windows/System32/libglapi.dll.bak
+          fi
+          
+          ln -s $(pwd)/x64/opengl32.dll /c/Windows/System32/opengl32.dll
+          ln -s $(pwd)/x64/libglapi.dll /c/Windows/System32/libglapi.dll
+
+      - name: Build Windows Project
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          rm -rf ${{ env.UPLOAD_TMP_DIR }}/*
+          bash ./build.sh release
+          bash ./build.sh test
+          tree ./build
