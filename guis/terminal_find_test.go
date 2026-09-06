@@ -105,3 +105,23 @@ func TestTerminalFindStateCanMatchWholeWords(t *testing.T) {
 		t.Fatalf("whole-word search = matches:%d status:%q", len(state.matches), state.Status())
 	}
 }
+
+func TestTerminalFindStateCanMatchRegularExpressionsAndReportInvalidPatterns(t *testing.T) {
+	terminal := uikit.NewUITerminalView(rect(0, 0, 420, 180))
+	terminal.Append("error-42 ERROR-7 error-x")
+	state := terminalFindState{}
+	state.Search(terminal, `error-\d+`)
+	if len(state.matches) != 0 {
+		t.Fatalf("literal search unexpectedly matched regular expression: %#v", state.matches)
+	}
+
+	state.SetRegularExpression(terminal, true)
+	if len(state.matches) != 2 || state.Status() != "1 of 2" {
+		t.Fatalf("regular-expression search = matches:%d status:%q", len(state.matches), state.Status())
+	}
+
+	state.Search(terminal, "[")
+	if len(state.matches) != 0 || state.index != -1 || state.Status() != "Invalid regular expression" {
+		t.Fatalf("invalid pattern state = matches:%d index:%d status:%q", len(state.matches), state.index, state.Status())
+	}
+}

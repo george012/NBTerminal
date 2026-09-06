@@ -11,28 +11,33 @@ import (
 
 const (
 	terminalFindWidth  = 560
-	terminalFindHeight = 224
+	terminalFindHeight = 260
 )
 
 type terminalFindState struct {
-	query         string
-	caseSensitive bool
-	wholeWord     bool
-	matches       []uikit.TerminalTextMatch
-	index         int
+	query             string
+	caseSensitive     bool
+	wholeWord         bool
+	regularExpression bool
+	invalidPattern    bool
+	matches           []uikit.TerminalTextMatch
+	index             int
 }
 
 func (s *terminalFindState) Search(terminal *uikit.UITerminalView, query string) {
 	s.query = query
 	s.index = -1
 	s.matches = nil
+	s.invalidPattern = false
 	if terminal == nil || strings.TrimSpace(query) == "" {
 		return
 	}
-	s.matches = terminal.SearchTextWithOptions(query, uikit.TerminalTextSearchOptions{
-		CaseSensitive: s.caseSensitive,
-		WholeWord:     s.wholeWord,
-	})
+	options := s.options()
+	if uikit.ValidateTerminalTextSearchQuery(query, options) != nil {
+		s.invalidPattern = true
+		return
+	}
+	s.matches = terminal.SearchTextWithOptions(query, options)
 	if len(s.matches) > 0 {
 		s.index = 0
 	}
@@ -52,6 +57,22 @@ func (s *terminalFindState) SetWholeWord(terminal *uikit.UITerminalView, enabled
 	}
 	s.wholeWord = enabled
 	s.Search(terminal, s.query)
+}
+
+func (s *terminalFindState) SetRegularExpression(terminal *uikit.UITerminalView, enabled bool) {
+	if s == nil || s.regularExpression == enabled {
+		return
+	}
+	s.regularExpression = enabled
+	s.Search(terminal, s.query)
+}
+
+func (s terminalFindState) options() uikit.TerminalTextSearchOptions {
+	return uikit.TerminalTextSearchOptions{
+		CaseSensitive:     s.caseSensitive,
+		WholeWord:         s.wholeWord,
+		RegularExpression: s.regularExpression,
+	}
 }
 
 func (s *terminalFindState) Refresh(terminal *uikit.UITerminalView) {
@@ -100,6 +121,8 @@ func (s terminalFindState) Status() string {
 	switch {
 	case strings.TrimSpace(s.query) == "":
 		return "Type to search"
+	case s.invalidPattern:
+		return "Invalid regular expression"
 	case len(s.matches) == 0:
 		return "No matches"
 	default:
@@ -108,14 +131,15 @@ func (s terminalFindState) Status() string {
 }
 
 type terminalFindWindow struct {
-	owner         *finalShellApp
-	window        *uikit.UIWindow
-	input         *uikit.Input
-	matchCase     *checkbox.UICheckbox
-	wholeWord     *checkbox.UICheckbox
-	status        *uikit.UILabel
-	state         terminalFindState
-	stopObserving func()
+	owner             *finalShellApp
+	window            *uikit.UIWindow
+	input             *uikit.Input
+	matchCase         *checkbox.UICheckbox
+	wholeWord         *checkbox.UICheckbox
+	regularExpression *checkbox.UICheckbox
+	status            *uikit.UILabel
+	state             terminalFindState
+	stopObserving     func()
 }
 
 func (a *finalShellApp) openTerminalFind() {
@@ -182,13 +206,17 @@ func (f *terminalFindWindow) build() {
 	f.wholeWord.View().SetAutomationID("terminal_find.whole_word").SetAutomationName("Whole word")
 	f.wholeWord.OnValueChanged(f.setWholeWord)
 	root.AddSubview(f.wholeWord)
+	f.regularExpression = checkbox.NewUICheckboxWithOptions(rect(26, 162, 220, 30), "Regular expression", checkStyle)
+	f.regularExpression.View().SetAutomationID("terminal_find.regular_expression").SetAutomationName("Regular expression")
+	f.regularExpression.OnValueChanged(f.setRegularExpression)
+	root.AddSubview(f.regularExpression)
 
-	f.status = mutedLabel(26, 174, 330, 28, "Type to search")
+	f.status = mutedLabel(26, 210, 330, 28, "Type to search")
 	f.status.SetFrame(fltk_bridge.FLAT_BOX)
 	f.status.SetBackgroundColor(uint(tokenColor(modernTheme.background)))
 	f.status.View().SetAutomationID("terminal_find.status")
 	root.AddSubview(f.status)
-	root.AddSubview(button(422, 170, 112, nativeControls.PrimaryButtonHeight, "Close", "terminal_find.close", f.close))
+	root.AddSubview(button(422, 206, 112, nativeControls.PrimaryButtonHeight, "Close", "terminal_find.close", f.close))
 	if f.owner != nil && f.owner.output != nil {
 		f.stopObserving = f.owner.output.ObserveTextChanged(f.refreshLiveSearch)
 	}
@@ -239,6 +267,14 @@ func (f *terminalFindWindow) setWholeWord(enabled bool) {
 		return
 	}
 	f.state.SetWholeWord(f.owner.output, enabled)
+	f.revealCurrent()
+}
+
+func (f *terminalFindWindow) setRegularExpression(enabled bool) {
+	if f == nil || f.owner == nil {
+		return
+	}
+	f.state.SetRegularExpression(f.owner.output, enabled)
 	f.revealCurrent()
 }
 
