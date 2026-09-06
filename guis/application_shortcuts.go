@@ -22,6 +22,7 @@ type applicationShortcutActions struct {
 	ResetTerminalZoom  func()
 	ClearTerminal      func()
 	CopyAllTerminal    func()
+	SaveTerminalOutput func()
 	FindTerminal       func()
 	FindNext           func()
 	FindPrevious       func()
@@ -54,7 +55,7 @@ func registerApplicationShortcut(window, terminal applicationShortcutRegistrar, 
 // Ctrl+= / Ctrl+- adjust terminal text, Ctrl+0 restores its default size, and
 // Ctrl+Shift+L clears only the active terminal's visible scrollback,
 // Ctrl+Shift+A copies the complete active terminal output without changing its
-// native selection,
+// native selection, Ctrl+Shift+S exports the complete rendered scrollback,
 // Ctrl+Shift+F opens retained-output search, F3 / Shift+F3 repeat it in either
 // direction,
 // Ctrl+Shift+D opens the active profile in an independent runtime tab, and
@@ -74,6 +75,7 @@ func registerDefaultApplicationShortcuts(window, terminal applicationShortcutReg
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+int('0'), actions.ResetTerminalZoom)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('l'), actions.ClearTerminal)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('a'), actions.CopyAllTerminal)
+	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('s'), actions.SaveTerminalOutput)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('f'), actions.FindTerminal)
 	registerApplicationShortcut(window, terminal, fltk_bridge.F3, actions.FindNext)
 	registerApplicationShortcut(window, terminal, fltk_bridge.SHIFT+fltk_bridge.F3, actions.FindPrevious)

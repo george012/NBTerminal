@@ -900,6 +900,7 @@ func (a *finalShellApp) build() {
 		ResetTerminalZoom:  func() { a.zoomTerminal(0) },
 		ClearTerminal:      a.clearTerminalOutput,
 		CopyAllTerminal:    func() { a.output.CopyAllText() },
+		SaveTerminalOutput: a.exportTerminalOutput,
 		FindTerminal:       a.openTerminalFind,
 		FindNext:           func() { a.navigateTerminalFind(1) },
 		FindPrevious:       func() { a.navigateTerminalFind(-1) },

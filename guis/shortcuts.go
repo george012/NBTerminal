@@ -7,8 +7,8 @@ import (
 
 const (
 	shortcutGuideWidth          = 760
-	shortcutGuideHeight         = 845
-	shortcutGuideTableHeight    = 679
+	shortcutGuideHeight         = 870
+	shortcutGuideTableHeight    = 704
 	shortcutGuideNativeRowPitch = 25
 )
 
@@ -37,6 +37,7 @@ func shortcutGuideItems() []shortcutGuideItem {
 		{Group: "Sessions", Action: "Close Session", Shortcut: "Ctrl+W"},
 		{Group: "Terminal", Action: "Copy Selection", Shortcut: "Ctrl+Shift+C"},
 		{Group: "Terminal", Action: "Copy All Output", Shortcut: "Ctrl+Shift+A"},
+		{Group: "Terminal", Action: "Save Terminal Output", Shortcut: "Ctrl+Shift+S"},
 		{Group: "Terminal", Action: "Find in Terminal", Shortcut: "Ctrl+Shift+F"},
 		{Group: "Terminal", Action: "Find Next Match", Shortcut: "F3"},
 		{Group: "Terminal", Action: "Find Previous Match", Shortcut: "Shift+F3"},
@@ -135,6 +136,6 @@ func (g *shortcutGuideWindow) build() {
 		g.table.ReloadData()
 		root.AddSubview(g.table)
 	}
-	root.AddSubview(button(620, 787, 112, nativeControls.PrimaryButtonHeight, "Close", "shortcuts.close", g.window.Close))
+	root.AddSubview(button(620, 812, 112, nativeControls.PrimaryButtonHeight, "Close", "shortcuts.close", g.window.Close))
 	g.window.Show()
 }
