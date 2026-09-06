@@ -156,6 +156,17 @@ func (a *finalShellApp) openTerminalFind() {
 	finder.build()
 }
 
+func (a *finalShellApp) navigateTerminalFind(delta int) {
+	if a == nil || a.output == nil {
+		return
+	}
+	if a.terminalFind == nil || a.terminalFind.window == nil || a.terminalFind.window.IsClosed() {
+		a.openTerminalFind()
+		return
+	}
+	a.terminalFind.navigate(delta)
+}
+
 func (f *terminalFindWindow) build() {
 	windowRect := centeredScreenRect(terminalFindWidth, terminalFindHeight)
 	if f.owner != nil && f.owner.window != nil && f.owner.window.Raw() != nil {
@@ -164,6 +175,8 @@ func (f *terminalFindWindow) build() {
 	}
 	f.window = uikit.NewWindowWithRect(windowRect, "Find in Terminal")
 	f.window.SetResizable(false)
+	f.window.OnShortcut(fltk_bridge.F3, func() { f.navigate(1) })
+	f.window.OnShortcut(fltk_bridge.SHIFT+fltk_bridge.F3, func() { f.navigate(-1) })
 	if raw := f.window.Raw(); raw != nil {
 		raw.SetXClass(nativeWindowClass())
 		raw.SetNonModal()

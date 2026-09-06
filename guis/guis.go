@@ -901,6 +901,8 @@ func (a *finalShellApp) build() {
 		ClearTerminal:      a.clearTerminalOutput,
 		CopyAllTerminal:    func() { a.output.CopyAllText() },
 		FindTerminal:       a.openTerminalFind,
+		FindNext:           func() { a.navigateTerminalFind(1) },
+		FindPrevious:       func() { a.navigateTerminalFind(-1) },
 		NextSession:        a.selectNextSession,
 		PreviousSession:    a.selectPreviousSession,
 		CloseSession:       a.closeActiveSession,

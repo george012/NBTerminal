@@ -4,7 +4,7 @@ import "testing"
 
 func TestShortcutGuideListsEveryProductCommandWithoutDuplicateKeys(t *testing.T) {
 	items := shortcutGuideItems()
-	if len(items) < 19 {
+	if len(items) < 21 {
 		t.Fatalf("shortcut guide has %d items, want every product command", len(items))
 	}
 	seen := make(map[string]string, len(items))
@@ -17,7 +17,7 @@ func TestShortcutGuideListsEveryProductCommandWithoutDuplicateKeys(t *testing.T)
 		}
 		seen[item.Shortcut] = item.Action
 	}
-	for _, required := range []string{"F1", "Ctrl+K", "Ctrl+Shift+N", "Ctrl+W", "Ctrl+Shift+T", "Ctrl+Shift+R", "Ctrl+Shift+D", "Ctrl+Shift+C", "Ctrl+Shift+A", "Ctrl+Shift+F", "Ctrl+Shift+V", "Alt+1…Alt+9"} {
+	for _, required := range []string{"F1", "Ctrl+K", "Ctrl+Shift+N", "Ctrl+W", "Ctrl+Shift+T", "Ctrl+Shift+R", "Ctrl+Shift+D", "Ctrl+Shift+C", "Ctrl+Shift+A", "Ctrl+Shift+F", "F3", "Shift+F3", "Ctrl+Shift+V", "Alt+1…Alt+9"} {
 		if seen[required] == "" {
 			t.Fatalf("shortcut guide is missing %q", required)
 		}
