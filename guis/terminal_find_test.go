@@ -1,10 +1,23 @@
 package guis
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/0xdevelop/fltk2go/uikit"
 )
+
+func TestTerminalFindInitialQueryUsesConciseSingleLineSelection(t *testing.T) {
+	if got := terminalFindInitialQuery("  SELECTED_MARKER  "); got != "SELECTED_MARKER" {
+		t.Fatalf("initial query = %q, want selected marker", got)
+	}
+	if got := terminalFindInitialQuery("first\nsecond"); got != "" {
+		t.Fatalf("multiline selection became query %q", got)
+	}
+	if got := terminalFindInitialQuery(strings.Repeat("x", terminalFindSelectionLimit+1)); got != "" {
+		t.Fatalf("oversized selection became a %d-rune query", len([]rune(got)))
+	}
+}
 
 func TestTerminalFindStateCyclesMatchesAndTracksQueryChanges(t *testing.T) {
 	terminal := uikit.NewUITerminalView(rect(0, 0, 420, 180))

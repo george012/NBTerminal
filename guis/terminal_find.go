@@ -10,9 +10,22 @@ import (
 )
 
 const (
-	terminalFindWidth  = 560
-	terminalFindHeight = 260
+	terminalFindWidth          = 560
+	terminalFindHeight         = 260
+	terminalFindSelectionLimit = 256
 )
+
+// terminalFindInitialQuery accepts only a concise single-line native terminal
+// selection. Multiline or very large selections are usually copied output,
+// rather than an intentional search term, and would make line-oriented terminal
+// search appear broken.
+func terminalFindInitialQuery(selection string) string {
+	selection = strings.TrimSpace(selection)
+	if selection == "" || strings.ContainsAny(selection, "\r\n") || len([]rune(selection)) > terminalFindSelectionLimit {
+		return ""
+	}
+	return selection
+}
 
 type terminalFindState struct {
 	query             string
@@ -232,6 +245,11 @@ func (f *terminalFindWindow) build() {
 	root.AddSubview(button(422, 206, 112, nativeControls.PrimaryButtonHeight, "Close", "terminal_find.close", f.close))
 	if f.owner != nil && f.owner.output != nil {
 		f.stopObserving = f.owner.output.ObserveTextChanged(f.refreshLiveSearch)
+		if query := terminalFindInitialQuery(f.owner.output.SelectedText()); query != "" {
+			f.input.SetText(query)
+			f.state.Search(f.owner.output, query)
+			f.revealCurrent()
+		}
 	}
 
 	f.window.Show()
