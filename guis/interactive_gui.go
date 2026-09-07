@@ -3,6 +3,8 @@ package guis
 import (
 	"context"
 	"errors"
+	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -196,6 +198,71 @@ func (a *finalShellApp) activeTerminalTitleChanged(title string) {
 	if ok && state.ID == sessionID && a.sessionTabs != nil {
 		a.sessionTabs.SetTabTitle(a.sessions.ActiveIndex(), sessionTabTitle(state))
 	}
+}
+
+func (a *finalShellApp) activeTerminalWorkingDirectoryChanged(directory uikit.TerminalWorkingDirectory) {
+	if a == nil || a.sessions == nil {
+		return
+	}
+	state, ok := a.sessions.Active()
+	if !ok || !workingDirectoryHostMatches(state.Profile, directory.Host) {
+		return
+	}
+	if state.Profile.Type == connectionTypeLocal {
+		info, err := os.Stat(directory.Path)
+		if err != nil || !info.IsDir() {
+			return
+		}
+	}
+	if !a.sessions.SetWorkingDirectory(state.ID, directory.Path) {
+		return
+	}
+	state, _ = a.sessions.Active()
+	a.updateTerminalSubtitle(state)
+}
+
+func workingDirectoryHostMatches(profile connectionProfile, host string) bool {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return true
+	}
+	if profile.Type == connectionTypeLocal {
+		localHost, err := os.Hostname()
+		return strings.EqualFold(host, "localhost") || (err == nil && hostNamesEquivalent(host, localHost))
+	}
+	// An authenticated SSH peer owns its PTY output. Its shell hostname may
+	// legitimately differ from the saved address (IP, alias, jump host, or
+	// container), while duplication still targets the same saved connection.
+	return profile.Type == connectionTypeSSH
+}
+
+func hostNamesEquivalent(left, right string) bool {
+	left, right = strings.TrimSuffix(strings.TrimSpace(left), "."), strings.TrimSuffix(strings.TrimSpace(right), ".")
+	if strings.EqualFold(left, right) {
+		return left != ""
+	}
+	if net.ParseIP(strings.Trim(left, "[]")) != nil || net.ParseIP(strings.Trim(right, "[]")) != nil {
+		return false
+	}
+	leftShort, _, _ := strings.Cut(left, ".")
+	rightShort, _, _ := strings.Cut(right, ".")
+	return leftShort != "" && strings.EqualFold(leftShort, rightShort)
+}
+
+func terminalSubtitleText(state terminalTabState) string {
+	if state.CurrentDirectory == "" {
+		return tr("terminal.subtitle")
+	}
+	return "Current directory: " + state.CurrentDirectory
+}
+
+func (a *finalShellApp) updateTerminalSubtitle(state terminalTabState) {
+	if a == nil || a.terminalSubtitle == nil {
+		return
+	}
+	text := terminalSubtitleText(state)
+	a.terminalSubtitle.SetText(text)
+	a.terminalSubtitle.View().SetTooltip(text)
 }
 
 func (a *finalShellApp) activeTerminalBell() {

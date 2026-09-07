@@ -16,16 +16,17 @@ const (
 )
 
 type terminalTabState struct {
-	ID             string
-	ProfileID      string
-	InstanceNumber int
-	Profile        connectionProfile
-	CommandDraft   string
-	Output         string
-	TerminalTitle  string
-	NeedsAttention bool
-	Status         sessionStatus
-	RunID          string
+	ID               string
+	ProfileID        string
+	InstanceNumber   int
+	Profile          connectionProfile
+	CommandDraft     string
+	Output           string
+	TerminalTitle    string
+	CurrentDirectory string
+	NeedsAttention   bool
+	Status           sessionStatus
+	RunID            string
 }
 
 type sessionWorkspace struct {
@@ -176,6 +177,21 @@ func (w *sessionWorkspace) SetTerminalTitle(id, title string) bool {
 	return false
 }
 
+// SetWorkingDirectory binds shell-reported OSC 7 metadata to one runtime. It
+// remains runtime-only: saved connection profiles are never modified.
+func (w *sessionWorkspace) SetWorkingDirectory(id, directory string) bool {
+	if w == nil || strings.TrimSpace(id) == "" || strings.TrimSpace(directory) == "" {
+		return false
+	}
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			w.tabs[index].CurrentDirectory = strings.TrimSpace(directory)
+			return true
+		}
+	}
+	return false
+}
+
 // SetAttention records a runtime-only terminal bell marker. Selecting the tab
 // acknowledges it; saved connection profiles and encrypted persistence are not
 // touched.
@@ -266,10 +282,20 @@ func (w *sessionWorkspace) ReopenLastClosed() (int, bool) {
 
 // DuplicateActive opens the active profile snapshot as a new runtime. Draft,
 // output, process state, and transport identity deliberately remain tab-local.
+// When the shell reported OSC 7 metadata, the fresh runtime starts in that
+// current directory without mutating the saved profile.
 func (w *sessionWorkspace) DuplicateActive() (int, bool) {
 	active, ok := w.Active()
 	if !ok {
 		return -1, false
 	}
-	return w.Open(active.Profile)
+	profile := active.Profile
+	if active.CurrentDirectory != "" {
+		profile.WorkingDir = active.CurrentDirectory
+	}
+	index, opened := w.Open(profile)
+	if opened && active.CurrentDirectory != "" {
+		w.tabs[index].CurrentDirectory = active.CurrentDirectory
+	}
+	return index, opened
 }

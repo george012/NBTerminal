@@ -888,6 +888,7 @@ func (a *finalShellApp) build() {
 	a.output.SetRedrawRate(0.016)
 	a.output.OnInput(a.writeActiveTerminalInput)
 	a.output.ObserveTitleChanged(a.activeTerminalTitleChanged)
+	a.output.ObserveWorkingDirectoryChanged(a.activeTerminalWorkingDirectoryChanged)
 	a.output.ObserveBell(a.activeTerminalBell)
 	a.installTerminalContextMenu(rightPanel)
 	registerDefaultApplicationShortcuts(a.window, a.output, applicationShortcutActions{
@@ -2250,6 +2251,7 @@ func (a *finalShellApp) renderActiveSession() {
 		if a.cmdInput != nil {
 			a.cmdInput.SetText("")
 		}
+		a.updateTerminalSubtitle(terminalTabState{})
 		a.updateCommandControls()
 		return
 	}
@@ -2263,6 +2265,7 @@ func (a *finalShellApp) renderActiveSession() {
 	if a.sessionTabs != nil {
 		a.sessionTabs.SetTabTitle(a.sessions.ActiveIndex(), sessionTabTitle(state))
 	}
+	a.updateTerminalSubtitle(state)
 	a.renderMonitorSidebar(state, true)
 	a.updateCommandControls()
 }

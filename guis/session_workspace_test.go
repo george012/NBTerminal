@@ -198,6 +198,37 @@ func TestSessionWorkspaceDuplicatesActiveProfileAsFreshRuntime(t *testing.T) {
 	}
 }
 
+func TestSessionWorkspaceDuplicatesLocalRuntimeAtReportedWorkingDirectory(t *testing.T) {
+	workspace := newSessionWorkspace()
+	profile := connectionProfile{ID: "local", Name: "Local Shell", Type: connectionTypeLocal, WorkingDir: "/saved"}
+	workspace.Open(profile)
+	original, _ := workspace.Active()
+	if !workspace.SetWorkingDirectory(original.ID, "/home/user/current") {
+		t.Fatal("failed to retain runtime working directory")
+	}
+
+	if _, duplicated := workspace.DuplicateActive(); !duplicated {
+		t.Fatal("failed to duplicate active runtime")
+	}
+	duplicate, _ := workspace.Active()
+	if duplicate.Profile.WorkingDir != "/home/user/current" {
+		t.Fatalf("duplicate working directory = %q, want reported current directory", duplicate.Profile.WorkingDir)
+	}
+	if duplicate.CurrentDirectory != "/home/user/current" {
+		t.Fatalf("duplicate did not expose its intentional starting directory: %#v", duplicate)
+	}
+	if workspace.Tabs()[0].Profile.WorkingDir != "/saved" {
+		t.Fatal("runtime metadata mutated the saved profile snapshot")
+	}
+}
+
+func TestSessionWorkspaceRejectsWorkingDirectoryForUnknownRuntime(t *testing.T) {
+	workspace := newSessionWorkspace()
+	if workspace.SetWorkingDirectory("missing", "/tmp") {
+		t.Fatal("unknown runtime accepted working-directory metadata")
+	}
+}
+
 func TestSessionWorkspaceDuplicateRejectsEmptyWorkspace(t *testing.T) {
 	workspace := newSessionWorkspace()
 	if index, ok := workspace.DuplicateActive(); ok || index != -1 {
