@@ -888,6 +888,7 @@ func (a *finalShellApp) build() {
 	a.output.SetRedrawRate(0.016)
 	a.output.OnInput(a.writeActiveTerminalInput)
 	a.output.ObserveTitleChanged(a.activeTerminalTitleChanged)
+	a.output.ObserveBell(a.activeTerminalBell)
 	a.installTerminalContextMenu(rightPanel)
 	registerDefaultApplicationShortcuts(a.window, a.output, applicationShortcutActions{
 		FocusQuickLauncher: a.focusQuickLauncher,
@@ -2178,6 +2179,9 @@ func sessionTabTitle(state terminalTabState) string {
 		prefix = "! "
 	case sessionStopped:
 		prefix = "■ "
+	}
+	if state.NeedsAttention {
+		prefix = "● " + prefix
 	}
 	name := strings.TrimSpace(state.TerminalTitle)
 	if name == "" {

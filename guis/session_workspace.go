@@ -23,6 +23,7 @@ type terminalTabState struct {
 	CommandDraft   string
 	Output         string
 	TerminalTitle  string
+	NeedsAttention bool
 	Status         sessionStatus
 	RunID          string
 }
@@ -89,6 +90,7 @@ func (w *sessionWorkspace) Select(index int) bool {
 		return false
 	}
 	w.activeIndex = index
+	w.tabs[index].NeedsAttention = false
 	return true
 }
 
@@ -168,6 +170,22 @@ func (w *sessionWorkspace) SetTerminalTitle(id, title string) bool {
 	for index := range w.tabs {
 		if w.tabs[index].ID == id {
 			w.tabs[index].TerminalTitle = strings.TrimSpace(title)
+			return true
+		}
+	}
+	return false
+}
+
+// SetAttention records a runtime-only terminal bell marker. Selecting the tab
+// acknowledges it; saved connection profiles and encrypted persistence are not
+// touched.
+func (w *sessionWorkspace) SetAttention(id string) bool {
+	if w == nil || strings.TrimSpace(id) == "" {
+		return false
+	}
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			w.tabs[index].NeedsAttention = true
 			return true
 		}
 	}

@@ -267,6 +267,32 @@ func TestSessionWorkspaceKeepsTerminalTitlesBoundToRuntimeIdentity(t *testing.T)
 	}
 }
 
+func TestSessionWorkspaceKeepsBellAttentionUntilSessionIsViewed(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "local", Name: "Local Shell", Type: connectionTypeLocal})
+	first, _ := workspace.Active()
+	workspace.Open(connectionProfile{ID: "remote", Name: "Production", Type: connectionTypeSSH})
+
+	if !workspace.SetAttention(first.ID) {
+		t.Fatal("failed to mark background runtime for attention")
+	}
+	if got := sessionTabTitle(workspace.Tabs()[0]); got != "● Local Shell" {
+		t.Fatalf("attention tab title = %q, want visible marker", got)
+	}
+	if !workspace.Select(0) {
+		t.Fatal("failed to select marked runtime")
+	}
+	if workspace.Tabs()[0].NeedsAttention {
+		t.Fatal("viewing runtime did not clear attention")
+	}
+	if got := sessionTabTitle(workspace.Tabs()[0]); got != "Local Shell" {
+		t.Fatalf("viewed tab title = %q, want cleared marker", got)
+	}
+	if workspace.SetAttention("missing") {
+		t.Fatal("unknown runtime accepted attention")
+	}
+}
+
 func TestQuickLocalSessionProfileStartsAtHomeWithoutPersistedSecrets(t *testing.T) {
 	profile := quickLocalSessionProfile(" /home/tester ")
 	if profile.ID != quickLocalSessionProfileID || profile.Name != "Local Shell" || profile.Type != connectionTypeLocal {

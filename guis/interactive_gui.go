@@ -198,6 +198,16 @@ func (a *finalShellApp) activeTerminalTitleChanged(title string) {
 	}
 }
 
+func (a *finalShellApp) activeTerminalBell() {
+	if a == nil || a.sessions == nil {
+		return
+	}
+	if a.sessions.SetAttention(a.activeSessionID()) {
+		a.refreshSessionTabs()
+		a.setStatus("Terminal bell")
+	}
+}
+
 func (a *finalShellApp) terminalViewResized(size uikit.TerminalSize) {
 	if a == nil || size.Columns <= 0 || size.Rows <= 0 {
 		return
