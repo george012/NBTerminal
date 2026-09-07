@@ -887,6 +887,7 @@ func (a *finalShellApp) build() {
 	a.output.SetHistoryRows(terminalScrollbackRows())
 	a.output.SetRedrawRate(0.016)
 	a.output.OnInput(a.writeActiveTerminalInput)
+	a.output.ObserveTitleChanged(a.activeTerminalTitleChanged)
 	a.installTerminalContextMenu(rightPanel)
 	registerDefaultApplicationShortcuts(a.window, a.output, applicationShortcutActions{
 		FocusQuickLauncher: a.focusQuickLauncher,
@@ -2178,7 +2179,10 @@ func sessionTabTitle(state terminalTabState) string {
 	case sessionStopped:
 		prefix = "■ "
 	}
-	name := state.Profile.Name
+	name := strings.TrimSpace(state.TerminalTitle)
+	if name == "" {
+		name = state.Profile.Name
+	}
 	if state.InstanceNumber > 1 {
 		name = fmt.Sprintf("%s · %d", name, state.InstanceNumber)
 	}

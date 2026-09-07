@@ -184,6 +184,20 @@ func (a *finalShellApp) writeActiveTerminalInput(data []byte) {
 	}
 }
 
+func (a *finalShellApp) activeTerminalTitleChanged(title string) {
+	if a == nil || a.sessions == nil {
+		return
+	}
+	sessionID := a.activeSessionID()
+	if !a.sessions.SetTerminalTitle(sessionID, title) {
+		return
+	}
+	state, ok := a.sessions.Active()
+	if ok && state.ID == sessionID && a.sessionTabs != nil {
+		a.sessionTabs.SetTabTitle(a.sessions.ActiveIndex(), sessionTabTitle(state))
+	}
+}
+
 func (a *finalShellApp) terminalViewResized(size uikit.TerminalSize) {
 	if a == nil || size.Columns <= 0 || size.Rows <= 0 {
 		return

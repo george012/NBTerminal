@@ -242,6 +242,31 @@ func TestSessionWorkspaceMoveActiveRejectsEmptyAndUnsupportedDelta(t *testing.T)
 	}
 }
 
+func TestSessionWorkspaceKeepsTerminalTitlesBoundToRuntimeIdentity(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "local", Name: "Local Shell", Type: connectionTypeLocal})
+	first, _ := workspace.Active()
+	workspace.Open(connectionProfile{ID: "remote", Name: "Production", Type: connectionTypeSSH})
+	second, _ := workspace.Active()
+
+	if !workspace.SetTerminalTitle(first.ID, "~/NBTerminal") {
+		t.Fatal("failed to set background runtime title")
+	}
+	if !workspace.SetTerminalTitle(second.ID, "deploy@prod") {
+		t.Fatal("failed to set active runtime title")
+	}
+	tabs := workspace.Tabs()
+	if got := sessionTabTitle(tabs[0]); got != "~/NBTerminal" {
+		t.Fatalf("first runtime title = %q, want OSC title", got)
+	}
+	if got := sessionTabTitle(tabs[1]); got != "deploy@prod" {
+		t.Fatalf("second runtime title = %q, want OSC title", got)
+	}
+	if workspace.SetTerminalTitle("missing", "spoof") {
+		t.Fatal("unknown runtime accepted a title update")
+	}
+}
+
 func TestQuickLocalSessionProfileStartsAtHomeWithoutPersistedSecrets(t *testing.T) {
 	profile := quickLocalSessionProfile(" /home/tester ")
 	if profile.ID != quickLocalSessionProfileID || profile.Name != "Local Shell" || profile.Type != connectionTypeLocal {

@@ -22,6 +22,7 @@ type terminalTabState struct {
 	Profile        connectionProfile
 	CommandDraft   string
 	Output         string
+	TerminalTitle  string
 	Status         sessionStatus
 	RunID          string
 }
@@ -151,6 +152,22 @@ func (w *sessionWorkspace) AppendOutput(id, output string) bool {
 	for index := range w.tabs {
 		if w.tabs[index].ID == id {
 			w.tabs[index].Output += output
+			return true
+		}
+	}
+	return false
+}
+
+// SetTerminalTitle binds shell-provided title metadata to one opaque runtime
+// identity. It is intentionally runtime-only and never mutates the saved
+// connection profile shared by other tabs.
+func (w *sessionWorkspace) SetTerminalTitle(id, title string) bool {
+	if w == nil || strings.TrimSpace(id) == "" {
+		return false
+	}
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			w.tabs[index].TerminalTitle = strings.TrimSpace(title)
 			return true
 		}
 	}
