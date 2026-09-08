@@ -52,3 +52,66 @@ func TestTerminalContextMenuReflectsSelectionAndRoutesCommands(t *testing.T) {
 		t.Fatal("copy item stayed disabled for selected terminal text")
 	}
 }
+
+func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T) {
+	invocations := map[string]int{}
+	items := sessionTabContextMenuItems(false, true, true,
+		func() { invocations["activate"]++ },
+		func() { invocations["duplicate"]++ },
+		func() { invocations["reconnect"]++ },
+		func() { invocations["close"]++ },
+	)
+	if len(items) != 4 {
+		t.Fatalf("session context menu item count = %d, want 4", len(items))
+	}
+	for index, title := range []string{"Activate Session", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Close Session	Ctrl+W"} {
+		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
+			t.Fatalf("session item %d = %#v", index, items[index])
+		}
+		items[index].Callback()
+	}
+	for _, action := range []string{"activate", "duplicate", "reconnect", "close"} {
+		if invocations[action] != 1 {
+			t.Fatalf("%s callback count = %d, want 1", action, invocations[action])
+		}
+	}
+
+	items = sessionTabContextMenuItems(true, false, false, func() {}, func() {}, func() {}, func() {})
+	if items[0].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+		t.Fatal("active session kept Activate enabled")
+	}
+	if items[2].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+		t.Fatal("non-interactive session kept Reconnect enabled")
+	}
+	if items[3].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+		t.Fatal("running session kept Close enabled")
+	}
+}
+
+func TestSessionTabContextMenuActionsResolveStableRuntimeIdentity(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "two", Name: "Two", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "three", Name: "Three", Type: connectionTypeLocal})
+
+	tabs := uikit.NewUITabView(rect(0, 0, 480, 180))
+	for _, state := range workspace.Tabs() {
+		tabs.AddTabWithID(state.ID, state.Profile.Name, nil)
+	}
+	tabs.SelectTab(2)
+	workspace.Select(2)
+	app := &finalShellApp{sessions: workspace, sessionTabs: tabs}
+	tabs.OnTabChanged(app.selectSessionTab)
+
+	if !app.activateSessionByID("runtime-1") || workspace.ActiveIndex() != 0 || tabs.ActiveIndex() != 0 {
+		t.Fatalf("stable activation drifted: workspace=%d tabs=%d", workspace.ActiveIndex(), tabs.ActiveIndex())
+	}
+	app.closeSessionByID("runtime-2")
+	states := workspace.Tabs()
+	if len(states) != 2 || states[0].ID != "runtime-1" || states[1].ID != "runtime-3" {
+		t.Fatalf("stable close targeted the wrong runtime: %#v", states)
+	}
+	if app.activateSessionByID("runtime-2") {
+		t.Fatal("removed runtime remained actionable")
+	}
+}
