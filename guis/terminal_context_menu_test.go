@@ -55,28 +55,32 @@ func TestTerminalContextMenuReflectsSelectionAndRoutesCommands(t *testing.T) {
 
 func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T) {
 	invocations := map[string]int{}
-	items := sessionTabContextMenuItems(false, true, true,
-		func() { invocations["activate"]++ },
-		func() { invocations["duplicate"]++ },
-		func() { invocations["reconnect"]++ },
-		func() { invocations["close"]++ },
-	)
-	if len(items) != 4 {
-		t.Fatalf("session context menu item count = %d, want 4", len(items))
+	items := sessionTabContextMenuItems(
+		sessionTabMenuState{reconnectable: true, closable: true, closeOthers: true, closeRight: true},
+		sessionTabMenuActions{
+			activate:    func() { invocations["activate"]++ },
+			duplicate:   func() { invocations["duplicate"]++ },
+			reconnect:   func() { invocations["reconnect"]++ },
+			close:       func() { invocations["close"]++ },
+			closeOthers: func() { invocations["close-others"]++ },
+			closeRight:  func() { invocations["close-right"]++ },
+		})
+	if len(items) != 6 {
+		t.Fatalf("session context menu item count = %d, want 6", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Close Session	Ctrl+W"} {
+	for index, title := range []string{"Activate Session", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
 		items[index].Callback()
 	}
-	for _, action := range []string{"activate", "duplicate", "reconnect", "close"} {
+	for _, action := range []string{"activate", "duplicate", "reconnect", "close", "close-others", "close-right"} {
 		if invocations[action] != 1 {
 			t.Fatalf("%s callback count = %d, want 1", action, invocations[action])
 		}
 	}
 
-	items = sessionTabContextMenuItems(true, false, false, func() {}, func() {}, func() {}, func() {})
+	items = sessionTabContextMenuItems(sessionTabMenuState{selected: true}, sessionTabMenuActions{})
 	if items[0].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("active session kept Activate enabled")
 	}
@@ -85,6 +89,67 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	}
 	if items[3].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("running session kept Close enabled")
+	}
+	if items[4].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[5].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+		t.Fatal("unavailable batch close actions remained enabled")
+	}
+}
+
+func TestSessionTabBatchCloseResolvesStableRuntimeAndPreservesTarget(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three", "four"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	tabs := uikit.NewUITabView(rect(0, 0, 480, 180))
+	for _, state := range workspace.Tabs() {
+		tabs.AddTabWithID(state.ID, state.Profile.Name, nil)
+	}
+	tabs.SelectTab(0)
+	workspace.Select(0)
+	app := &finalShellApp{sessions: workspace, sessionTabs: tabs}
+	tabs.OnTabChanged(app.selectSessionTab)
+
+	if !app.canCloseSessionsToRight("runtime-2") {
+		t.Fatal("close-right should be available with idle sessions to the right")
+	}
+	app.closeSessionsToRight("runtime-2")
+	states := workspace.Tabs()
+	if len(states) != 2 || states[0].ID != "runtime-1" || states[1].ID != "runtime-2" {
+		t.Fatalf("close-right retained wrong sessions: %#v", states)
+	}
+	if tabs.Count() != 2 || workspace.ActiveIndex() != 0 {
+		t.Fatalf("close-right drifted native tabs or active session: tabs=%d active=%d", tabs.Count(), workspace.ActiveIndex())
+	}
+
+	if !app.canCloseOtherSessions("runtime-2") {
+		t.Fatal("close-others should be available with one idle peer")
+	}
+	app.closeOtherSessions("runtime-2")
+	states = workspace.Tabs()
+	if len(states) != 1 || states[0].ID != "runtime-2" || workspace.ActiveIndex() != 0 || tabs.ActiveIndex() != 0 {
+		t.Fatalf("close-others did not retain and activate target: %#v active=%d native=%d", states, workspace.ActiveIndex(), tabs.ActiveIndex())
+	}
+}
+
+func TestSessionTabBatchCloseFailsClosedWhenAffectedSessionIsRunning(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "one", Name: "one", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "two", Name: "two", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "three", Name: "three", Type: connectionTypeLocal})
+	workspace.Select(2)
+	if !workspace.BeginRun("run-three") {
+		t.Fatal("failed to mark right-hand session running")
+	}
+	workspace.Select(0)
+	app := &finalShellApp{sessions: workspace}
+
+	if app.canCloseSessionsToRight("runtime-1") || app.canCloseOtherSessions("runtime-1") {
+		t.Fatal("batch close stayed available across a running affected session")
+	}
+	app.closeSessionsToRight("runtime-1")
+	app.closeOtherSessions("runtime-1")
+	if got := len(workspace.Tabs()); got != 3 {
+		t.Fatalf("fail-closed batch close partially removed sessions: %d", got)
 	}
 }
 
