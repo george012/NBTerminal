@@ -172,8 +172,25 @@ func TestSessionWorkspaceReopensMostRecentlyClosedProfileAsFreshRuntime(t *testi
 
 func TestSessionWorkspaceReopenRejectsEmptyHistory(t *testing.T) {
 	workspace := newSessionWorkspace()
+	if workspace.CanReopenClosed() {
+		t.Fatal("empty workspace reported reopen history")
+	}
 	if index, ok := workspace.ReopenLastClosed(); ok || index != -1 {
 		t.Fatalf("empty reopen = index %d, ok %t", index, ok)
+	}
+}
+
+func TestSessionWorkspaceReportsReopenAvailabilityAcrossCloseAndReopen(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "local", Name: "Local", Type: connectionTypeLocal})
+	if workspace.CanReopenClosed() {
+		t.Fatal("open workspace reported reopen history before any close")
+	}
+	if !workspace.Close(0) || !workspace.CanReopenClosed() {
+		t.Fatal("closing an idle runtime did not expose reopen history")
+	}
+	if _, ok := workspace.ReopenLastClosed(); !ok || workspace.CanReopenClosed() {
+		t.Fatal("reopening the only closed runtime did not consume reopen history")
 	}
 }
 

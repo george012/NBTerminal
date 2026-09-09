@@ -56,26 +56,27 @@ func TestTerminalContextMenuReflectsSelectionAndRoutesCommands(t *testing.T) {
 func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T) {
 	invocations := map[string]int{}
 	items := sessionTabContextMenuItems(
-		sessionTabMenuState{reconnectable: true, closable: true, closeOthers: true, closeLeft: true, closeRight: true},
+		sessionTabMenuState{reconnectable: true, reopenable: true, closable: true, closeOthers: true, closeLeft: true, closeRight: true},
 		sessionTabMenuActions{
 			activate:    func() { invocations["activate"]++ },
 			duplicate:   func() { invocations["duplicate"]++ },
 			reconnect:   func() { invocations["reconnect"]++ },
+			reopen:      func() { invocations["reopen"]++ },
 			close:       func() { invocations["close"]++ },
 			closeOthers: func() { invocations["close-others"]++ },
 			closeLeft:   func() { invocations["close-left"]++ },
 			closeRight:  func() { invocations["close-right"]++ },
 		})
-	if len(items) != 7 {
-		t.Fatalf("session context menu item count = %d, want 7", len(items))
+	if len(items) != 8 {
+		t.Fatalf("session context menu item count = %d, want 8", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
+	for index, title := range []string{"Activate Session", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
 		items[index].Callback()
 	}
-	for _, action := range []string{"activate", "duplicate", "reconnect", "close", "close-others", "close-left", "close-right"} {
+	for _, action := range []string{"activate", "duplicate", "reconnect", "reopen", "close", "close-others", "close-left", "close-right"} {
 		if invocations[action] != 1 {
 			t.Fatalf("%s callback count = %d, want 1", action, invocations[action])
 		}
@@ -89,9 +90,12 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 		t.Fatal("non-interactive session kept Reconnect enabled")
 	}
 	if items[3].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+		t.Fatal("empty close history kept Reopen enabled")
+	}
+	if items[4].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("running session kept Close enabled")
 	}
-	if items[4].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[5].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[6].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[5].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[6].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[7].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("unavailable batch close actions remained enabled")
 	}
 }

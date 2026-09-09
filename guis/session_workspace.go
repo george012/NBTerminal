@@ -263,6 +263,13 @@ func (w *sessionWorkspace) Close(index int) bool {
 	return true
 }
 
+// CanReopenClosed reports whether the bounded, runtime-only close history has
+// a profile snapshot available. Callers use it to keep mouse and keyboard
+// reopen affordances consistent without exposing the retained profiles.
+func (w *sessionWorkspace) CanReopenClosed() bool {
+	return w != nil && len(w.closedProfiles) > 0
+}
+
 // ReopenLastClosed creates a fresh runtime session for the most recently
 // closed profile. Mutable terminal state and transport identity are never
 // revived: the closed tab's profile snapshot is the only retained value.

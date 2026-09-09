@@ -44,11 +44,11 @@ func terminalContextMenuItems(terminal *uikit.UITerminalView, state uikit.Contex
 }
 
 type sessionTabMenuState struct {
-	selected, reconnectable, closable, closeOthers, closeLeft, closeRight bool
+	selected, reconnectable, reopenable, closable, closeOthers, closeLeft, closeRight bool
 }
 
 type sessionTabMenuActions struct {
-	activate, duplicate, reconnect, close, closeOthers, closeLeft, closeRight func()
+	activate, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
 }
 
 func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMenuActions) []uikit.MenuItem {
@@ -61,7 +61,8 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	return []uikit.MenuItem{
 		{Title: "Activate Session", Flags: inactiveWhen(!state.selected), Callback: actions.activate},
 		{Title: "Duplicate Session	Ctrl+Shift+D", Callback: actions.duplicate},
-		{Title: "Reconnect Session	Ctrl+Shift+R", Flags: inactiveWhen(state.reconnectable) | fltk_bridge.MENU_DIVIDER, Callback: actions.reconnect},
+		{Title: "Reconnect Session	Ctrl+Shift+R", Flags: inactiveWhen(state.reconnectable), Callback: actions.reconnect},
+		{Title: "Reopen Closed Session	Ctrl+Shift+T", Flags: inactiveWhen(state.reopenable) | fltk_bridge.MENU_DIVIDER, Callback: actions.reopen},
 		{Title: "Close Session	Ctrl+W", Flags: inactiveWhen(state.closable), Callback: actions.close},
 		{Title: "Close Other Sessions", Flags: inactiveWhen(state.closeOthers), Callback: actions.closeOthers},
 		{Title: "Close Sessions to the Left", Flags: inactiveWhen(state.closeLeft), Callback: actions.closeLeft},
@@ -99,6 +100,7 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 		menu.SetMenu(sessionTabContextMenuItems(sessionTabMenuState{
 			selected:      index == a.sessions.ActiveIndex(),
 			reconnectable: reconnectable,
+			reopenable:    a.sessions.CanReopenClosed(),
 			closable:      state.Status != sessionRunning,
 			closeOthers:   a.canCloseOtherSessions(request.ID),
 			closeLeft:     a.canCloseSessionsToLeft(request.ID),
@@ -115,6 +117,7 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 					a.reconnectActiveSession()
 				}
 			},
+			reopen:      a.reopenLastClosedSession,
 			close:       func() { a.closeSessionByID(request.ID) },
 			closeOthers: func() { a.closeOtherSessions(request.ID) },
 			closeLeft:   func() { a.closeSessionsToLeft(request.ID) },
