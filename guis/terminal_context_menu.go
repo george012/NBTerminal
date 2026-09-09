@@ -50,7 +50,7 @@ type sessionTabMenuState struct {
 }
 
 type sessionTabMenuActions struct {
-	activate, pin, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
+	activate, rename, pin, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
 }
 
 func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMenuActions) []uikit.MenuItem {
@@ -66,6 +66,7 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	}
 	return []uikit.MenuItem{
 		{Title: "Activate Session", Flags: inactiveWhen(!state.selected), Callback: actions.activate},
+		{Title: "Rename Session…", Callback: actions.rename},
 		{Title: pinTitle, Callback: actions.pin},
 		{Title: "Duplicate Session	Ctrl+Shift+D", Callback: actions.duplicate},
 		{Title: "Reconnect Session	Ctrl+Shift+R", Flags: inactiveWhen(state.reconnectable), Callback: actions.reconnect},
@@ -115,6 +116,7 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 			closeRight:    a.canCloseSessionsToRight(request.ID),
 		}, sessionTabMenuActions{
 			activate: func() { a.activateSessionByID(request.ID) },
+			rename:   func() { a.openSessionRename(request.ID) },
 			pin:      func() { a.togglePinnedSession(request.ID) },
 			duplicate: func() {
 				if a.activateSessionByID(request.ID) {

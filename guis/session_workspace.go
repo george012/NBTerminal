@@ -23,6 +23,7 @@ type terminalTabState struct {
 	CommandDraft     string
 	Output           string
 	TerminalTitle    string
+	CustomTitle      string
 	CurrentDirectory string
 	NeedsAttention   bool
 	Pinned           bool
@@ -172,6 +173,22 @@ func (w *sessionWorkspace) SetTerminalTitle(id, title string) bool {
 	for index := range w.tabs {
 		if w.tabs[index].ID == id {
 			w.tabs[index].TerminalTitle = strings.TrimSpace(title)
+			return true
+		}
+	}
+	return false
+}
+
+// SetCustomTitle stores a user-selected, runtime-only label. Shell title
+// metadata continues to update underneath it so clearing the custom label can
+// immediately resume the latest shell-provided title.
+func (w *sessionWorkspace) SetCustomTitle(id, title string) bool {
+	if w == nil || strings.TrimSpace(id) == "" {
+		return false
+	}
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			w.tabs[index].CustomTitle = strings.TrimSpace(title)
 			return true
 		}
 	}

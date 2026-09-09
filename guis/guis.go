@@ -475,6 +475,7 @@ type finalShellApp struct {
 	settings            *settingsWindow
 	shortcuts           *shortcutGuideWindow
 	terminalFind        *terminalFindWindow
+	sessionRename       *sessionRenameWindow
 	editor              *connectionEditor
 	manager             *connectionManagerWindow
 	monitorPanel        *uikit.UIGroup
@@ -2190,7 +2191,10 @@ func sessionTabTitle(state terminalTabState) string {
 	if state.NeedsAttention {
 		prefix = "● " + prefix
 	}
-	name := strings.TrimSpace(state.TerminalTitle)
+	name := strings.TrimSpace(state.CustomTitle)
+	if name == "" {
+		name = strings.TrimSpace(state.TerminalTitle)
+	}
 	if name == "" {
 		name = state.Profile.Name
 	}

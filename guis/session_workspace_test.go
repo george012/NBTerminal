@@ -337,6 +337,32 @@ func TestSessionWorkspaceKeepsTerminalTitlesBoundToRuntimeIdentity(t *testing.T)
 	}
 }
 
+func TestSessionWorkspaceCustomTitleOverridesShellTitleWithoutMutatingProfile(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "prod", Name: "Production", Type: connectionTypeSSH})
+	state, _ := workspace.Active()
+	if !workspace.SetTerminalTitle(state.ID, "deploy@prod") || !workspace.SetCustomTitle(state.ID, "Incident bridge") {
+		t.Fatal("failed to set runtime titles")
+	}
+	state, _ = workspace.Active()
+	if got := sessionTabTitle(state); got != "Incident bridge" {
+		t.Fatalf("custom tab title = %q", got)
+	}
+	if state.Profile.Name != "Production" || state.TerminalTitle != "deploy@prod" {
+		t.Fatalf("custom title mutated profile or shell metadata: %#v", state)
+	}
+	if !workspace.SetCustomTitle(state.ID, "") {
+		t.Fatal("failed to reset custom title")
+	}
+	state, _ = workspace.Active()
+	if got := sessionTabTitle(state); got != "deploy@prod" {
+		t.Fatalf("reset title = %q, want shell title", got)
+	}
+	if workspace.SetCustomTitle("missing", "spoof") {
+		t.Fatal("unknown runtime accepted a custom title")
+	}
+}
+
 func TestSessionWorkspaceKeepsBellAttentionUntilSessionIsViewed(t *testing.T) {
 	workspace := newSessionWorkspace()
 	workspace.Open(connectionProfile{ID: "local", Name: "Local Shell", Type: connectionTypeLocal})
