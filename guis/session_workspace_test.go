@@ -180,6 +180,28 @@ func TestSessionWorkspaceReopenRejectsEmptyHistory(t *testing.T) {
 	}
 }
 
+func TestSessionWorkspacePinnedRuntimeRejectsCloseUntilUnpinned(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "production", Name: "Production", Type: connectionTypeLocal})
+	state, _ := workspace.Active()
+
+	if !workspace.SetPinned(state.ID, true) {
+		t.Fatal("failed to pin runtime")
+	}
+	if workspace.Close(0) {
+		t.Fatal("pinned runtime was closed")
+	}
+	if got := workspace.Tabs(); len(got) != 1 || !got[0].Pinned {
+		t.Fatalf("pinned state was not preserved: %#v", got)
+	}
+	if got := sessionTabTitle(workspace.Tabs()[0]); got != "◆ Production" {
+		t.Fatalf("pinned tab title = %q", got)
+	}
+	if !workspace.SetPinned(state.ID, false) || !workspace.Close(0) {
+		t.Fatal("unpin did not restore normal close behavior")
+	}
+}
+
 func TestSessionWorkspaceReportsReopenAvailabilityAcrossCloseAndReopen(t *testing.T) {
 	workspace := newSessionWorkspace()
 	workspace.Open(connectionProfile{ID: "local", Name: "Local", Type: connectionTypeLocal})

@@ -25,6 +25,7 @@ type terminalTabState struct {
 	TerminalTitle    string
 	CurrentDirectory string
 	NeedsAttention   bool
+	Pinned           bool
 	Status           sessionStatus
 	RunID            string
 }
@@ -208,6 +209,21 @@ func (w *sessionWorkspace) SetAttention(id string) bool {
 	return false
 }
 
+// SetPinned protects one runtime from mouse, keyboard, and batch close paths.
+// Pinning is intentionally runtime-only and never mutates the saved profile.
+func (w *sessionWorkspace) SetPinned(id string, pinned bool) bool {
+	if w == nil || strings.TrimSpace(id) == "" {
+		return false
+	}
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			w.tabs[index].Pinned = pinned
+			return true
+		}
+	}
+	return false
+}
+
 func (w *sessionWorkspace) BeginRun(runID string) bool {
 	if w == nil || w.activeIndex < 0 || w.activeIndex >= len(w.tabs) || strings.TrimSpace(runID) == "" {
 		return false
@@ -238,7 +254,7 @@ func (w *sessionWorkspace) FinishRun(runID string, status sessionStatus) bool {
 }
 
 func (w *sessionWorkspace) Close(index int) bool {
-	if w == nil || index < 0 || index >= len(w.tabs) || w.tabs[index].Status == sessionRunning {
+	if w == nil || index < 0 || index >= len(w.tabs) || w.tabs[index].Status == sessionRunning || w.tabs[index].Pinned {
 		return false
 	}
 	closedProfile := w.tabs[index].Profile

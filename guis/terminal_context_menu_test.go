@@ -59,6 +59,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 		sessionTabMenuState{reconnectable: true, reopenable: true, closable: true, closeOthers: true, closeLeft: true, closeRight: true},
 		sessionTabMenuActions{
 			activate:    func() { invocations["activate"]++ },
+			pin:         func() { invocations["pin"]++ },
 			duplicate:   func() { invocations["duplicate"]++ },
 			reconnect:   func() { invocations["reconnect"]++ },
 			reopen:      func() { invocations["reopen"]++ },
@@ -67,16 +68,16 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 			closeLeft:   func() { invocations["close-left"]++ },
 			closeRight:  func() { invocations["close-right"]++ },
 		})
-	if len(items) != 8 {
-		t.Fatalf("session context menu item count = %d, want 8", len(items))
+	if len(items) != 9 {
+		t.Fatalf("session context menu item count = %d, want 9", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
+	for index, title := range []string{"Activate Session", "Pin Session", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
 		items[index].Callback()
 	}
-	for _, action := range []string{"activate", "duplicate", "reconnect", "reopen", "close", "close-others", "close-left", "close-right"} {
+	for _, action := range []string{"activate", "pin", "duplicate", "reconnect", "reopen", "close", "close-others", "close-left", "close-right"} {
 		if invocations[action] != 1 {
 			t.Fatalf("%s callback count = %d, want 1", action, invocations[action])
 		}
@@ -86,17 +87,22 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	if items[0].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("active session kept Activate enabled")
 	}
-	if items[2].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[3].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("non-interactive session kept Reconnect enabled")
 	}
-	if items[3].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[4].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("empty close history kept Reopen enabled")
 	}
-	if items[4].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[5].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("running session kept Close enabled")
 	}
-	if items[5].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[6].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[7].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[6].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[7].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[8].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("unavailable batch close actions remained enabled")
+	}
+
+	items = sessionTabContextMenuItems(sessionTabMenuState{pinned: true}, sessionTabMenuActions{})
+	if items[1].Title != "Unpin Session" || items[5].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+		t.Fatalf("pinned menu state = %#v", items)
 	}
 }
 
@@ -183,6 +189,28 @@ func TestSessionTabBatchCloseFailsClosedWhenAffectedSessionIsRunning(t *testing.
 	app.closeOtherSessions("runtime-1")
 	if got := len(workspace.Tabs()); got != 3 {
 		t.Fatalf("fail-closed batch close partially removed sessions: %d", got)
+	}
+}
+
+func TestSessionTabBatchCloseSkipsPinnedPeers(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	if !workspace.SetPinned("runtime-2", true) {
+		t.Fatal("failed to pin peer")
+	}
+	tabs := uikit.NewUITabView(rect(0, 0, 480, 180))
+	for _, state := range workspace.Tabs() {
+		tabs.AddTabWithID(state.ID, sessionTabTitle(state), nil)
+	}
+	app := &finalShellApp{sessions: workspace, sessionTabs: tabs}
+	tabs.OnTabChanged(app.selectSessionTab)
+
+	app.closeOtherSessions("runtime-1")
+	states := workspace.Tabs()
+	if len(states) != 2 || states[0].ID != "runtime-1" || states[1].ID != "runtime-2" || !states[1].Pinned {
+		t.Fatalf("batch close did not preserve pinned peer: %#v", states)
 	}
 }
 

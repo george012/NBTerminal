@@ -1,6 +1,8 @@
 package guis
 
 import (
+	"fmt"
+
 	"github.com/0xdevelop/fltk2go/fltk_bridge"
 	"github.com/0xdevelop/fltk2go/uikit"
 )
@@ -44,11 +46,11 @@ func terminalContextMenuItems(terminal *uikit.UITerminalView, state uikit.Contex
 }
 
 type sessionTabMenuState struct {
-	selected, reconnectable, reopenable, closable, closeOthers, closeLeft, closeRight bool
+	selected, pinned, reconnectable, reopenable, closable, closeOthers, closeLeft, closeRight bool
 }
 
 type sessionTabMenuActions struct {
-	activate, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
+	activate, pin, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
 }
 
 func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMenuActions) []uikit.MenuItem {
@@ -58,8 +60,13 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 		}
 		return fltk_bridge.MENU_INACTIVE
 	}
+	pinTitle := "Pin Session"
+	if state.pinned {
+		pinTitle = "Unpin Session"
+	}
 	return []uikit.MenuItem{
 		{Title: "Activate Session", Flags: inactiveWhen(!state.selected), Callback: actions.activate},
+		{Title: pinTitle, Callback: actions.pin},
 		{Title: "Duplicate Session	Ctrl+Shift+D", Callback: actions.duplicate},
 		{Title: "Reconnect Session	Ctrl+Shift+R", Flags: inactiveWhen(state.reconnectable), Callback: actions.reconnect},
 		{Title: "Reopen Closed Session	Ctrl+Shift+T", Flags: inactiveWhen(state.reopenable) | fltk_bridge.MENU_DIVIDER, Callback: actions.reopen},
@@ -99,14 +106,16 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 		reconnectable := state.Profile.Type == connectionTypeLocal || state.Profile.Type == connectionTypeSSH
 		menu.SetMenu(sessionTabContextMenuItems(sessionTabMenuState{
 			selected:      index == a.sessions.ActiveIndex(),
+			pinned:        state.Pinned,
 			reconnectable: reconnectable,
 			reopenable:    a.sessions.CanReopenClosed(),
-			closable:      state.Status != sessionRunning,
+			closable:      state.Status != sessionRunning && !state.Pinned,
 			closeOthers:   a.canCloseOtherSessions(request.ID),
 			closeLeft:     a.canCloseSessionsToLeft(request.ID),
 			closeRight:    a.canCloseSessionsToRight(request.ID),
 		}, sessionTabMenuActions{
 			activate: func() { a.activateSessionByID(request.ID) },
+			pin:      func() { a.togglePinnedSession(request.ID) },
 			duplicate: func() {
 				if a.activateSessionByID(request.ID) {
 					a.duplicateActiveSession()
@@ -157,6 +166,23 @@ func (a *finalShellApp) closeSessionByID(id string) {
 	}
 }
 
+func (a *finalShellApp) togglePinnedSession(id string) {
+	index := a.sessionIndexByID(id)
+	if index < 0 {
+		return
+	}
+	state := a.sessions.Tabs()[index]
+	if !a.sessions.SetPinned(id, !state.Pinned) {
+		return
+	}
+	a.refreshSessionTabs()
+	if state.Pinned {
+		a.setStatus(fmt.Sprintf("Unpinned %s", state.Profile.Name))
+	} else {
+		a.setStatus(fmt.Sprintf("Pinned %s", state.Profile.Name))
+	}
+}
+
 type sessionBatchCloseMode uint8
 
 const (
@@ -180,6 +206,9 @@ func (a *finalShellApp) batchCloseSessionIDs(targetID string, mode sessionBatchC
 	ids := make([]string, 0, len(states)-1)
 	for index, state := range states {
 		if index == target || (mode == closeSessionsToLeft && index > target) || (mode == closeSessionsToRight && index < target) {
+			continue
+		}
+		if state.Pinned {
 			continue
 		}
 		if state.Status == sessionRunning {

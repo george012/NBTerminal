@@ -863,7 +863,8 @@ func (a *finalShellApp) build() {
 	rightPanel.AddSubview(a.sessionTabs)
 	activeSessionIndex := a.sessions.ActiveIndex()
 	for _, state := range a.sessions.Tabs() {
-		a.sessionTabs.AddTabWithID(state.ID, sessionTabTitle(state), nil)
+		index := a.sessionTabs.AddTabWithID(state.ID, sessionTabTitle(state), nil)
+		a.sessionTabs.SetTabClosable(index, !state.Pinned)
 	}
 	if activeSessionIndex >= 0 {
 		a.sessionTabs.SelectTab(activeSessionIndex)
@@ -2173,15 +2174,18 @@ func (a *finalShellApp) connectSelected() {
 
 func sessionTabTitle(state terminalTabState) string {
 	prefix := ""
+	if state.Pinned {
+		prefix = "◆ "
+	}
 	switch state.Status {
 	case sessionRunning:
-		prefix = "▶ "
+		prefix += "▶ "
 	case sessionSucceeded:
-		prefix = "✓ "
+		prefix += "✓ "
 	case sessionFailed:
-		prefix = "! "
+		prefix += "! "
 	case sessionStopped:
-		prefix = "■ "
+		prefix += "■ "
 	}
 	if state.NeedsAttention {
 		prefix = "● " + prefix
@@ -2346,6 +2350,7 @@ func (a *finalShellApp) openSession(profile connectionProfile) {
 	if a.sessionTabs != nil && stateOK {
 		if created {
 			a.sessionTabs.AddTabWithID(state.ID, sessionTabTitle(state), nil)
+			a.sessionTabs.SetTabClosable(index, !state.Pinned)
 			a.sessionTabs.SelectTab(index)
 		} else {
 			a.sessionTabs.SetTabTitle(index, sessionTabTitle(state))
@@ -2401,6 +2406,10 @@ func (a *finalShellApp) closeSessionAt(index int) {
 		return
 	}
 	state := tabs[index]
+	if state.Pinned {
+		a.setStatus("Unpin session before closing")
+		return
+	}
 	wasActive := index == a.sessions.ActiveIndex()
 	if wasActive {
 		a.syncActiveSessionView()
@@ -2538,6 +2547,7 @@ func (a *finalShellApp) refreshSessionTabs() {
 	}
 	for index, state := range a.sessions.Tabs() {
 		a.sessionTabs.SetTabTitle(index, sessionTabTitle(state))
+		a.sessionTabs.SetTabClosable(index, !state.Pinned)
 	}
 }
 
