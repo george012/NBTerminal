@@ -1256,6 +1256,43 @@ func TestSessionTabCloseAffordanceClosesRequestedBackgroundRuntime(t *testing.T)
 	}
 }
 
+func TestSessionTabMiddleClickContractClosesRequestedRuntimeAndProtectsPinned(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	workspace.Select(2)
+
+	tabs := uikit.NewUITabView(rect(0, 0, 480, 180))
+	for _, state := range workspace.Tabs() {
+		tabs.AddTabWithID(state.ID, state.Profile.Name, nil)
+	}
+	tabs.SelectTab(2)
+	tabs.SetTabsClosable(true)
+	app := &finalShellApp{sessions: workspace, sessionTabs: tabs}
+	tabs.OnTabCloseRequested(app.closeSessionAt)
+
+	if !tabs.RequestTabClose(1) {
+		t.Fatal("middle-click close contract rejected an ordinary background runtime")
+	}
+	if got := workspace.Tabs(); len(got) != 2 || got[0].ID != "runtime-1" || got[1].ID != "runtime-3" {
+		t.Fatalf("middle-click close contract removed the wrong runtime: %#v", got)
+	}
+	if tabs.ActiveIndex() != 1 || workspace.ActiveIndex() != 1 {
+		t.Fatalf("background middle-click close drifted active identity: native=%d workspace=%d", tabs.ActiveIndex(), workspace.ActiveIndex())
+	}
+
+	if _, ok := tabs.SetTabPinned(0, true); !ok || !workspace.SetPinned("runtime-1", true) {
+		t.Fatal("failed to pin protected runtime")
+	}
+	if tabs.RequestTabClose(0) {
+		t.Fatal("middle-click close contract accepted a pinned runtime")
+	}
+	if got := workspace.Tabs(); len(got) != 2 || !got[0].Pinned || got[0].ID != "runtime-1" {
+		t.Fatalf("pinned runtime changed after rejected middle-click close: %#v", got)
+	}
+}
+
 func TestSessionTabCloseAffordanceRespectsRunningSessionVeto(t *testing.T) {
 	workspace := newSessionWorkspace()
 	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})
