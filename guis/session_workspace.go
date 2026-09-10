@@ -108,6 +108,9 @@ func (w *sessionWorkspace) MoveActive(delta int) bool {
 	if target < 0 || target >= len(w.tabs) {
 		return false
 	}
+	if w.tabs[w.activeIndex].Pinned != w.tabs[target].Pinned {
+		return false
+	}
 	w.tabs[w.activeIndex], w.tabs[target] = w.tabs[target], w.tabs[w.activeIndex]
 	w.activeIndex = target
 	return true
@@ -232,9 +235,31 @@ func (w *sessionWorkspace) SetPinned(id string, pinned bool) bool {
 	if w == nil || strings.TrimSpace(id) == "" {
 		return false
 	}
+	activeID := ""
+	if active, ok := w.Active(); ok {
+		activeID = active.ID
+	}
 	for index := range w.tabs {
 		if w.tabs[index].ID == id {
-			w.tabs[index].Pinned = pinned
+			if w.tabs[index].Pinned == pinned {
+				return true
+			}
+			state := w.tabs[index]
+			state.Pinned = pinned
+			w.tabs = append(w.tabs[:index], w.tabs[index+1:]...)
+			boundary := 0
+			for boundary < len(w.tabs) && w.tabs[boundary].Pinned {
+				boundary++
+			}
+			w.tabs = append(w.tabs, terminalTabState{})
+			copy(w.tabs[boundary+1:], w.tabs[boundary:])
+			w.tabs[boundary] = state
+			for activeIndex := range w.tabs {
+				if w.tabs[activeIndex].ID == activeID {
+					w.activeIndex = activeIndex
+					break
+				}
+			}
 			return true
 		}
 	}

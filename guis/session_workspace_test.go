@@ -202,6 +202,60 @@ func TestSessionWorkspacePinnedRuntimeRejectsCloseUntilUnpinned(t *testing.T) {
 	}
 }
 
+func TestSessionWorkspaceGroupsPinnedRuntimesAtLeadingEdge(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three", "four"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	workspace.Select(0)
+
+	if !workspace.SetPinned("runtime-3", true) || !workspace.SetPinned("runtime-2", true) {
+		t.Fatal("failed to pin runtimes")
+	}
+	states := workspace.Tabs()
+	if got := []string{states[0].ID, states[1].ID, states[2].ID, states[3].ID}; strings.Join(got, ",") != "runtime-3,runtime-2,runtime-1,runtime-4" {
+		t.Fatalf("pinned order = %v, want stable leading pin group", got)
+	}
+	active, _ := workspace.Active()
+	if active.ID != "runtime-1" {
+		t.Fatalf("pinning background runtimes changed active identity: %#v", active)
+	}
+
+	if !workspace.SetPinned("runtime-3", false) {
+		t.Fatal("failed to unpin runtime")
+	}
+	states = workspace.Tabs()
+	if got := []string{states[0].ID, states[1].ID, states[2].ID, states[3].ID}; strings.Join(got, ",") != "runtime-2,runtime-3,runtime-1,runtime-4" {
+		t.Fatalf("unpin order = %v, want runtime at unpinned boundary", got)
+	}
+	active, _ = workspace.Active()
+	if active.ID != "runtime-1" {
+		t.Fatalf("unpinning background runtime changed active identity: %#v", active)
+	}
+}
+
+func TestSessionWorkspaceMoveActiveCannotCrossPinnedBoundary(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	if !workspace.SetPinned("runtime-2", true) {
+		t.Fatal("failed to pin runtime")
+	}
+
+	workspace.Select(0)
+	if workspace.MoveActive(1) {
+		t.Fatal("pinned runtime crossed into the unpinned group")
+	}
+	workspace.Select(1)
+	if workspace.MoveActive(-1) {
+		t.Fatal("unpinned runtime crossed into the pinned group")
+	}
+	if got := workspace.Tabs(); got[0].ID != "runtime-2" || !got[0].Pinned || got[1].ID != "runtime-1" {
+		t.Fatalf("rejected boundary moves changed runtime order: %#v", got)
+	}
+}
+
 func TestSessionWorkspaceReportsReopenAvailabilityAcrossCloseAndReopen(t *testing.T) {
 	workspace := newSessionWorkspace()
 	workspace.Open(connectionProfile{ID: "local", Name: "Local", Type: connectionTypeLocal})

@@ -210,8 +210,8 @@ func TestSessionTabBatchCloseSkipsPinnedPeers(t *testing.T) {
 
 	app.closeOtherSessions("runtime-1")
 	states := workspace.Tabs()
-	if len(states) != 2 || states[0].ID != "runtime-1" || states[1].ID != "runtime-2" || !states[1].Pinned {
-		t.Fatalf("batch close did not preserve pinned peer: %#v", states)
+	if len(states) != 2 || states[0].ID != "runtime-2" || !states[0].Pinned || states[1].ID != "runtime-1" {
+		t.Fatalf("batch close did not preserve the leading pinned peer: %#v", states)
 	}
 }
 
@@ -240,5 +240,36 @@ func TestSessionTabContextMenuActionsResolveStableRuntimeIdentity(t *testing.T) 
 	}
 	if app.activateSessionByID("runtime-2") {
 		t.Fatal("removed runtime remained actionable")
+	}
+}
+
+func TestTogglePinnedSessionKeepsNativeAndWorkspaceOrderAligned(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	workspace.Select(0)
+	tabs := uikit.NewUITabView(rect(0, 0, 480, 180))
+	for _, state := range workspace.Tabs() {
+		tabs.AddTabWithID(state.ID, sessionTabTitle(state), nil)
+	}
+	tabs.SelectTab(0)
+	app := &finalShellApp{sessions: workspace, sessionTabs: tabs}
+	tabs.OnTabChanged(app.selectSessionTab)
+
+	app.togglePinnedSession("runtime-3")
+	states := workspace.Tabs()
+	if states[0].ID != "runtime-3" || !states[0].Pinned || tabs.TabID(0) != "runtime-3" {
+		t.Fatalf("pin did not align leading native/workspace tab: states=%#v native=%q", states, tabs.TabID(0))
+	}
+	active, _ := workspace.Active()
+	if active.ID != "runtime-1" || tabs.ActiveIndex() != 1 {
+		t.Fatalf("pinning background tab changed active identity: active=%#v native=%d", active, tabs.ActiveIndex())
+	}
+
+	app.togglePinnedSession("runtime-3")
+	states = workspace.Tabs()
+	if states[0].ID != "runtime-3" || states[0].Pinned || tabs.TabID(0) != "runtime-3" {
+		t.Fatalf("unpin did not keep runtime at unpinned boundary: states=%#v native=%q", states, tabs.TabID(0))
 	}
 }
