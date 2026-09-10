@@ -259,17 +259,20 @@ func TestTogglePinnedSessionKeepsNativeAndWorkspaceOrderAligned(t *testing.T) {
 
 	app.togglePinnedSession("runtime-3")
 	states := workspace.Tabs()
-	if states[0].ID != "runtime-3" || !states[0].Pinned || tabs.TabID(0) != "runtime-3" {
+	if states[0].ID != "runtime-3" || !states[0].Pinned || tabs.TabID(0) != "runtime-3" || !tabs.TabPinned(0) || tabs.PinnedCount() != 1 {
 		t.Fatalf("pin did not align leading native/workspace tab: states=%#v native=%q", states, tabs.TabID(0))
 	}
 	active, _ := workspace.Active()
 	if active.ID != "runtime-1" || tabs.ActiveIndex() != 1 {
 		t.Fatalf("pinning background tab changed active identity: active=%#v native=%d", active, tabs.ActiveIndex())
 	}
+	if tabs.MoveTab(0, 1) || tabs.MoveTab(1, 0) {
+		t.Fatal("native tab view allowed a pinned/ordinary partition crossing")
+	}
 
 	app.togglePinnedSession("runtime-3")
 	states = workspace.Tabs()
-	if states[0].ID != "runtime-3" || states[0].Pinned || tabs.TabID(0) != "runtime-3" {
+	if states[0].ID != "runtime-3" || states[0].Pinned || tabs.TabID(0) != "runtime-3" || tabs.TabPinned(0) || tabs.PinnedCount() != 0 {
 		t.Fatalf("unpin did not keep runtime at unpinned boundary: states=%#v native=%q", states, tabs.TabID(0))
 	}
 }

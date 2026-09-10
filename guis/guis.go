@@ -865,6 +865,7 @@ func (a *finalShellApp) build() {
 	activeSessionIndex := a.sessions.ActiveIndex()
 	for _, state := range a.sessions.Tabs() {
 		index := a.sessionTabs.AddTabWithID(state.ID, sessionTabTitle(state), nil)
+		index, _ = a.sessionTabs.SetTabPinned(index, state.Pinned)
 		a.sessionTabs.SetTabClosable(index, !state.Pinned)
 	}
 	if activeSessionIndex >= 0 {
@@ -2549,8 +2550,13 @@ func (a *finalShellApp) refreshSessionTabs() {
 	if a == nil || a.sessions == nil || a.sessionTabs == nil {
 		return
 	}
-	for index, state := range a.sessions.Tabs() {
+	for _, state := range a.sessions.Tabs() {
+		index := a.sessionTabs.IndexOfID(state.ID)
+		if index < 0 {
+			continue
+		}
 		a.sessionTabs.SetTabTitle(index, sessionTabTitle(state))
+		index, _ = a.sessionTabs.SetTabPinned(index, state.Pinned)
 		a.sessionTabs.SetTabClosable(index, !state.Pinned)
 	}
 }

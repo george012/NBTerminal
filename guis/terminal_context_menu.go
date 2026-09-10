@@ -176,22 +176,17 @@ func (a *finalShellApp) togglePinnedSession(id string) {
 	states := a.sessions.Tabs()
 	state := states[index]
 	pinned := !state.Pinned
-	target := 0
-	for _, peer := range states {
-		if peer.ID != id && peer.Pinned {
-			target++
-		}
-	}
-	movedNative := false
-	if a.sessionTabs != nil && target != index {
-		if !a.sessionTabs.MoveTab(index, target) {
+	nativeIndex := index
+	if a.sessionTabs != nil {
+		var ok bool
+		nativeIndex, ok = a.sessionTabs.SetTabPinned(index, pinned)
+		if !ok {
 			return
 		}
-		movedNative = true
 	}
 	if !a.sessions.SetPinned(id, pinned) {
-		if movedNative {
-			a.sessionTabs.MoveTab(target, index)
+		if a.sessionTabs != nil {
+			a.sessionTabs.SetTabPinned(nativeIndex, !pinned)
 		}
 		return
 	}
