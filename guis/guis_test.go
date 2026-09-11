@@ -1202,6 +1202,35 @@ func TestSessionShortcutMovesActiveRuntimeAndNativeTabTogether(t *testing.T) {
 	}
 }
 
+func TestSessionTabMoveRequestReordersBackgroundRuntimeWithoutChangingActiveIdentity(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	workspace.Select(2)
+	active, _ := workspace.Active()
+	tabs := uikit.NewUITabView(rect(0, 0, 480, 180))
+	for _, state := range workspace.Tabs() {
+		tabs.AddTabWithID(state.ID, state.Profile.Name, nil)
+	}
+	tabs.SelectTab(2)
+	app := &finalShellApp{sessions: workspace, sessionTabs: tabs}
+	tabs.OnTabMoveRequested(app.moveSessionTab)
+
+	if !tabs.RequestTabMove(0, 1) {
+		t.Fatal("native drag contract rejected background runtime move")
+	}
+	if got := workspace.Tabs(); got[0].ID != "runtime-2" || got[1].ID != "runtime-1" || got[2].ID != active.ID {
+		t.Fatalf("workspace order drifted: %#v", got)
+	}
+	if tabs.TabID(0) != "runtime-2" || tabs.TabID(1) != "runtime-1" || tabs.TabID(2) != active.ID {
+		t.Fatalf("native order drifted: %q %q %q", tabs.TabID(0), tabs.TabID(1), tabs.TabID(2))
+	}
+	if workspace.ActiveIndex() != 2 || tabs.ActiveIndex() != 2 {
+		t.Fatalf("active selection changed: workspace=%d native=%d", workspace.ActiveIndex(), tabs.ActiveIndex())
+	}
+}
+
 func TestSessionShortcutSelectsExactRuntimeTab(t *testing.T) {
 	workspace := newSessionWorkspace()
 	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})

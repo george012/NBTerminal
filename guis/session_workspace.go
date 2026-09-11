@@ -105,14 +105,43 @@ func (w *sessionWorkspace) MoveActive(delta int) bool {
 		return false
 	}
 	target := w.activeIndex + delta
-	if target < 0 || target >= len(w.tabs) {
+	return w.Move(w.tabs[w.activeIndex].ID, target)
+}
+
+// Move reorders one runtime by stable identity while preserving the selected
+// runtime and every tab-local field. Pinned and ordinary partitions cannot be
+// crossed by mouse, keyboard, or programmatic callers.
+func (w *sessionWorkspace) Move(id string, target int) bool {
+	if w == nil || strings.TrimSpace(id) == "" || target < 0 || target >= len(w.tabs) {
 		return false
 	}
-	if w.tabs[w.activeIndex].Pinned != w.tabs[target].Pinned {
+	from := -1
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			from = index
+			break
+		}
+	}
+	if from < 0 || from == target || w.tabs[from].Pinned != w.tabs[target].Pinned {
 		return false
 	}
-	w.tabs[w.activeIndex], w.tabs[target] = w.tabs[target], w.tabs[w.activeIndex]
-	w.activeIndex = target
+	activeID := ""
+	if active, ok := w.Active(); ok {
+		activeID = active.ID
+	}
+	state := w.tabs[from]
+	if from < target {
+		copy(w.tabs[from:target], w.tabs[from+1:target+1])
+	} else {
+		copy(w.tabs[target+1:from+1], w.tabs[target:from])
+	}
+	w.tabs[target] = state
+	for index := range w.tabs {
+		if w.tabs[index].ID == activeID {
+			w.activeIndex = index
+			break
+		}
+	}
 	return true
 }
 

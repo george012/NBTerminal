@@ -366,6 +366,38 @@ func TestSessionWorkspaceMoveActiveRejectsEmptyAndUnsupportedDelta(t *testing.T)
 	}
 }
 
+func TestSessionWorkspaceMovesRuntimeByStableIdentityWithoutChangingSelection(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "two", Name: "Two", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "three", Name: "Three", Type: connectionTypeLocal})
+	workspace.Select(2)
+	active, _ := workspace.Active()
+
+	if !workspace.Move("runtime-1", 1) {
+		t.Fatal("stable runtime move failed")
+	}
+	states := workspace.Tabs()
+	if states[0].ID != "runtime-2" || states[1].ID != "runtime-1" || states[2].ID != "runtime-3" {
+		t.Fatalf("runtime order = %#v", states)
+	}
+	if selected, _ := workspace.Active(); selected.ID != active.ID || workspace.ActiveIndex() != 2 {
+		t.Fatalf("active identity drifted: index=%d state=%#v", workspace.ActiveIndex(), selected)
+	}
+}
+
+func TestSessionWorkspaceMoveRejectsPinnedBoundaryAndUnknownRuntime(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "two", Name: "Two", Type: connectionTypeLocal})
+	if !workspace.SetPinned("runtime-1", true) {
+		t.Fatal("failed to pin runtime")
+	}
+	if workspace.Move("runtime-2", 0) || workspace.Move("missing", 1) || workspace.Move("runtime-2", 1) {
+		t.Fatal("invalid runtime move was accepted")
+	}
+}
+
 func TestSessionWorkspaceKeepsTerminalTitlesBoundToRuntimeIdentity(t *testing.T) {
 	workspace := newSessionWorkspace()
 	workspace.Open(connectionProfile{ID: "local", Name: "Local Shell", Type: connectionTypeLocal})

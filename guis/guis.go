@@ -873,6 +873,7 @@ func (a *finalShellApp) build() {
 		a.sessions.Select(activeSessionIndex)
 	}
 	a.sessionTabs.OnTabChanged(a.selectSessionTab)
+	a.sessionTabs.OnTabMoveRequested(a.moveSessionTab)
 	a.sessionTabs.SetTabsClosable(true)
 	a.sessionTabs.OnTabCloseRequested(a.closeSessionAt)
 	a.installSessionTabContextMenu(rightPanel)
@@ -2315,20 +2316,42 @@ func (a *finalShellApp) moveActiveSession(delta int) {
 	if from < 0 || to < 0 || to >= len(a.sessions.Tabs()) {
 		return
 	}
+	state, ok := a.sessions.Active()
+	if !ok {
+		return
+	}
+	a.moveSessionTab(tabview.TabMoveRequest{ID: state.ID, From: from, To: to})
+}
+
+// moveSessionTab atomically applies owner-controlled native drag and keyboard
+// reordering to the toolkit and workspace. Stable identity is resolved again at
+// action time so earlier tab removals or moves cannot retarget the request.
+func (a *finalShellApp) moveSessionTab(request tabview.TabMoveRequest) {
+	if a == nil || a.sessions == nil || a.sessionTabs == nil {
+		return
+	}
+	from := a.sessionIndexByID(request.ID)
+	to := request.To
+	if from < 0 || to < 0 || to >= len(a.sessions.Tabs()) || from == to {
+		return
+	}
 	a.syncActiveSessionView()
 	if !a.sessionTabs.MoveTab(from, to) {
 		return
 	}
-	if !a.sessions.MoveActive(delta) {
+	if !a.sessions.Move(request.ID, to) {
 		a.sessionTabs.MoveTab(to, from)
 		return
 	}
-	if state, ok := a.sessions.Active(); ok {
-		direction := "right"
-		if delta < 0 {
-			direction = "left"
+	direction := "right"
+	if to < from {
+		direction = "left"
+	}
+	for _, state := range a.sessions.Tabs() {
+		if state.ID == request.ID {
+			a.setStatus(fmt.Sprintf("Moved %s %s", state.Profile.Name, direction))
+			break
 		}
-		a.setStatus(fmt.Sprintf("Moved %s %s", state.Profile.Name, direction))
 	}
 }
 
