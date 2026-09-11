@@ -1307,7 +1307,7 @@ func (a *finalShellApp) layoutTerminalPanel() {
 		a.closeTabButton.Raw().Resize(layout.CloseTab.X, layout.CloseTab.Y, layout.CloseTab.Width, layout.CloseTab.Height)
 	}
 	if a.sessionTabs != nil && a.sessionTabs.Raw() != nil {
-		a.sessionTabs.Raw().Resize(layout.Tabs.X, layout.Tabs.Y, layout.Tabs.Width, layout.Tabs.Height)
+		a.sessionTabs.Resize(layout.Tabs.X, layout.Tabs.Y, layout.Tabs.Width, layout.Tabs.Height)
 	}
 	if a.output != nil && a.output.Raw() != nil {
 		a.output.Raw().Resize(layout.Output.X, layout.Output.Y, layout.Output.Width, layout.Output.Height)
