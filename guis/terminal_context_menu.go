@@ -2,6 +2,7 @@ package guis
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0xdevelop/fltk2go/fltk_bridge"
 	"github.com/0xdevelop/fltk2go/uikit"
@@ -78,6 +79,52 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	}
 }
 
+type sessionTabListEntry struct {
+	ID, Title        string
+	Selected, Pinned bool
+}
+
+func sessionTabListMenuTitle(title string) string {
+	title = strings.Map(func(r rune) rune {
+		switch r {
+		case '/', '\\':
+			return '-'
+		case '\n', '\r', '	':
+			return ' '
+		}
+		if r < ' ' || r == 0x7f {
+			return -1
+		}
+		return r
+	}, title)
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return "Session"
+	}
+	return title
+}
+
+func sessionTabListMenuItems(entries []sessionTabListEntry, activate func(id string)) []uikit.MenuItem {
+	items := make([]uikit.MenuItem, 0, len(entries))
+	for _, entry := range entries {
+		entry := entry
+		title := sessionTabListMenuTitle(entry.Title)
+		if entry.Pinned {
+			title = "[Pinned] " + title
+		}
+		flags := fltk_bridge.MENU_RADIO
+		if entry.Selected {
+			flags |= fltk_bridge.MENU_VALUE
+		}
+		items = append(items, uikit.MenuItem{Title: title, Flags: flags, Callback: func() {
+			if activate != nil {
+				activate(entry.ID)
+			}
+		}})
+	}
+	return items
+}
+
 func (a *finalShellApp) installTerminalContextMenu(parent *uikit.UIGroup) {
 	if a == nil || parent == nil || a.output == nil {
 		return
@@ -134,6 +181,23 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 			closeLeft:   func() { a.closeSessionsToLeft(request.ID) },
 			closeRight:  func() { a.closeSessionsToRight(request.ID) },
 		}))
+		menu.Popup()
+	})
+}
+
+func (a *finalShellApp) installSessionTabListMenu(parent *uikit.UIGroup) {
+	if a == nil || parent == nil || a.sessionTabs == nil {
+		return
+	}
+	menu := uikit.NewUIContextMenu(rect(0, 0, 0, 0))
+	parent.AddSubview(menu)
+	a.sessionListMenu = menu
+	a.sessionTabs.OnTabListRequested(func(items []uikit.TabListItem) {
+		entries := make([]sessionTabListEntry, len(items))
+		for index, item := range items {
+			entries[index] = sessionTabListEntry{ID: item.ID, Title: item.Title, Selected: item.Selected, Pinned: item.Pinned}
+		}
+		menu.SetMenu(sessionTabListMenuItems(entries, func(id string) { a.activateSessionByID(id) }))
 		menu.Popup()
 	})
 }

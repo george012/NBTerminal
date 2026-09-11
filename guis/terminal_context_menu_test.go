@@ -107,6 +107,34 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	}
 }
 
+func TestSessionTabListMenuMarksActiveAndPinnedAndRoutesStableIdentity(t *testing.T) {
+	selected := ""
+	items := sessionTabListMenuItems([]sessionTabListEntry{
+		{ID: "runtime-1", Title: "Production", Selected: false, Pinned: true},
+		{ID: "runtime-2", Title: "Logs", Selected: true},
+		{ID: "runtime-3", Title: "Shell", Selected: false},
+	}, func(id string) { selected = id })
+	if len(items) != 3 {
+		t.Fatalf("tab list menu item count = %d, want 3", len(items))
+	}
+	if items[0].Title != "[Pinned] Production" || items[0].Flags&fltk_bridge.MENU_RADIO == 0 || items[0].Flags&fltk_bridge.MENU_VALUE != 0 {
+		t.Fatalf("pinned tab list item = %#v", items[0])
+	}
+	if items[1].Title != "Logs" || items[1].Flags&fltk_bridge.MENU_RADIO == 0 || items[1].Flags&fltk_bridge.MENU_VALUE == 0 {
+		t.Fatalf("selected tab list item = %#v", items[1])
+	}
+	items[0].Callback()
+	if selected != "runtime-1" {
+		t.Fatalf("tab list selected %q, want stable runtime-1", selected)
+	}
+	if got := sessionTabListMenuTitle(" Build/Logs\\Path\nNow	 "); got != "Build-Logs-Path Now" {
+		t.Fatalf("menu-safe shell title = %q", got)
+	}
+	if got := sessionTabListMenuTitle("\x00\n"); got != "Session" {
+		t.Fatalf("empty menu-safe shell title = %q", got)
+	}
+}
+
 func TestSessionTabBatchCloseResolvesStableRuntimeAndPreservesTarget(t *testing.T) {
 	workspace := newSessionWorkspace()
 	for _, id := range []string{"one", "two", "three", "four"} {

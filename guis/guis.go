@@ -458,6 +458,7 @@ type finalShellApp struct {
 	output              *uikit.UITerminalView
 	terminalContextMenu *uikit.UIContextMenu
 	sessionContextMenu  *uikit.UIContextMenu
+	sessionListMenu     *uikit.UIContextMenu
 	terminalColumns     int
 	sessionTabs         *uikit.UITabView
 	terminalPanel       *uikit.UIGroup
@@ -877,6 +878,7 @@ func (a *finalShellApp) build() {
 	a.sessionTabs.SetTabsClosable(true)
 	a.sessionTabs.OnTabCloseRequested(a.closeSessionAt)
 	a.installSessionTabContextMenu(rightPanel)
+	a.installSessionTabListMenu(rightPanel)
 
 	a.output = uikit.NewUITerminalView(rect(terminalLayout.Output.X, terminalLayout.Output.Y, terminalLayout.Output.Width, terminalLayout.Output.Height))
 	a.output.SetAutomationID("terminal.output").SetAutomationName(tr("terminal.output_name"))
