@@ -271,6 +271,42 @@ func TestSessionTabContextMenuActionsResolveStableRuntimeIdentity(t *testing.T) 
 	}
 }
 
+func TestPinnedSessionStaysVisibleWhileOverflowingSessionsNavigate(t *testing.T) {
+	workspace := newSessionWorkspace()
+	for _, id := range []string{"one", "two", "three", "four", "five"} {
+		workspace.Open(connectionProfile{ID: id, Name: id, Type: connectionTypeLocal})
+	}
+	tabs := uikit.NewUITabView(rect(0, 0, 500, 180))
+	tabs.SetAutomationID("sticky-product-sessions")
+	for _, state := range workspace.Tabs() {
+		tabs.AddTabWithID(state.ID, state.Profile.Name, nil)
+	}
+	tabs.SelectTab(4)
+	workspace.Select(4)
+	app := &finalShellApp{sessions: workspace, sessionTabs: tabs}
+	tabs.OnTabChanged(app.selectSessionTab)
+
+	app.togglePinnedSession("runtime-1")
+	if !app.activateSessionByID("runtime-5") {
+		t.Fatal("failed to activate final overflowing runtime")
+	}
+	var listed []uikit.TabListItem
+	tabs.OnTabListRequested(func(items []uikit.TabListItem) { listed = items })
+	if !tabs.RequestTabList() || len(listed) != 5 {
+		t.Fatalf("overflow list = %#v", listed)
+	}
+	for _, item := range listed {
+		wantVisible := item.ID == "runtime-1" || item.ID == "runtime-4" || item.ID == "runtime-5"
+		if item.Visible != wantVisible {
+			t.Fatalf("runtime %s visible=%t, want %t", item.ID, item.Visible, wantVisible)
+		}
+	}
+	states := workspace.Tabs()
+	if !states[0].Pinned || states[0].ID != "runtime-1" || tabs.TabID(0) != "runtime-1" || tabs.ActiveIndex() != 4 {
+		t.Fatalf("sticky pin drifted product state: states=%#v active=%d", states, tabs.ActiveIndex())
+	}
+}
+
 func TestTogglePinnedSessionKeepsNativeAndWorkspaceOrderAligned(t *testing.T) {
 	workspace := newSessionWorkspace()
 	for _, id := range []string{"one", "two", "three"} {
