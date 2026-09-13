@@ -306,9 +306,23 @@ func TestPinnedSessionStaysVisibleWhileOverflowingSessionsNavigate(t *testing.T)
 	if !ok || !previous.AutomationSnapshot().Enabled {
 		t.Fatalf("previous session viewport action unavailable at trailing boundary: ok=%t node=%#v", ok, previous)
 	}
+	if got := previous.AutomationSnapshot().Properties["tooltip"]; got != "Show previous tabs" {
+		t.Fatalf("previous session viewport tooltip = %#v", got)
+	}
 	next, ok := view.AutomationLookup("sticky-product-sessions.overflow.next")
 	if !ok || next.AutomationSnapshot().Enabled {
 		t.Fatalf("next session viewport action remained enabled at trailing boundary: ok=%t node=%#v", ok, next)
+	}
+	if got := next.AutomationSnapshot().Properties["tooltip"]; got != "Show next tabs" {
+		t.Fatalf("next session viewport tooltip = %#v", got)
+	}
+	list, ok := view.AutomationLookup("sticky-product-sessions.overflow.list")
+	if !ok || list.AutomationSnapshot().Properties["tooltip"] != "Show all tabs" {
+		t.Fatalf("session list tooltip missing: ok=%t node=%#v", ok, list)
+	}
+	first, ok := view.AutomationLookup("sticky-product-sessions.tab.runtime-1")
+	if !ok || first.AutomationSnapshot().Properties["tooltip"] != "◆ one" {
+		t.Fatalf("session tab title tooltip missing: ok=%t node=%#v", ok, first)
 	}
 	if err := view.AutomationClick("sticky-product-sessions.overflow.next"); err != view.ErrAutomationNodeUnavailable {
 		t.Fatalf("exhausted next session action error = %v, want unavailable", err)
