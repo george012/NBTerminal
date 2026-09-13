@@ -5,6 +5,7 @@ import (
 
 	"github.com/0xdevelop/fltk2go/fltk_bridge"
 	"github.com/0xdevelop/fltk2go/uikit"
+	"github.com/0xdevelop/fltk2go/uikit/view"
 )
 
 func TestTerminalContextMenuReflectsSelectionAndRoutesCommands(t *testing.T) {
@@ -299,6 +300,30 @@ func TestPinnedSessionStaysVisibleWhileOverflowingSessionsNavigate(t *testing.T)
 		wantVisible := item.ID == "runtime-1" || item.ID == "runtime-4" || item.ID == "runtime-5"
 		if item.Visible != wantVisible {
 			t.Fatalf("runtime %s visible=%t, want %t", item.ID, item.Visible, wantVisible)
+		}
+	}
+	previous, ok := view.AutomationLookup("sticky-product-sessions.overflow.previous")
+	if !ok || !previous.AutomationSnapshot().Enabled {
+		t.Fatalf("previous session viewport action unavailable at trailing boundary: ok=%t node=%#v", ok, previous)
+	}
+	next, ok := view.AutomationLookup("sticky-product-sessions.overflow.next")
+	if !ok || next.AutomationSnapshot().Enabled {
+		t.Fatalf("next session viewport action remained enabled at trailing boundary: ok=%t node=%#v", ok, next)
+	}
+	if err := view.AutomationClick("sticky-product-sessions.overflow.next"); err != view.ErrAutomationNodeUnavailable {
+		t.Fatalf("exhausted next session action error = %v, want unavailable", err)
+	}
+	if err := view.AutomationClick("sticky-product-sessions.overflow.previous"); err != nil {
+		t.Fatalf("previous session viewport action failed: %v", err)
+	}
+	listed = nil
+	if !tabs.RequestTabList() {
+		t.Fatal("overflow list unavailable after previous navigation")
+	}
+	for _, item := range listed {
+		wantVisible := item.ID == "runtime-1" || item.ID == "runtime-3" || item.ID == "runtime-4"
+		if item.Visible != wantVisible {
+			t.Fatalf("runtime %s visible after previous=%t, want %t", item.ID, item.Visible, wantVisible)
 		}
 	}
 	states := workspace.Tabs()
