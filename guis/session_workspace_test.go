@@ -202,6 +202,35 @@ func TestSessionWorkspacePinnedRuntimeRejectsCloseUntilUnpinned(t *testing.T) {
 	}
 }
 
+func TestSessionWorkspaceMutedBellIgnoresAttentionAndClearsExistingMarker(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "production", Name: "Production", Type: connectionTypeLocal})
+	state, _ := workspace.Active()
+
+	if !workspace.SetAttention(state.ID) {
+		t.Fatal("failed to mark runtime attention")
+	}
+	if !workspace.SetBellMuted(state.ID, true) {
+		t.Fatal("failed to mute runtime bell")
+	}
+	muted, _ := workspace.Active()
+	if !muted.BellMuted || muted.NeedsAttention {
+		t.Fatalf("muting did not clear attention: %#v", muted)
+	}
+	if workspace.SetAttention(state.ID) {
+		t.Fatal("muted runtime accepted a new bell attention marker")
+	}
+	if got := sessionTabTitle(workspace.Tabs()[0]); got != "M Production" {
+		t.Fatalf("muted tab title = %q, want %q", got, "M Production")
+	}
+	if !workspace.SetBellMuted(state.ID, false) || !workspace.SetAttention(state.ID) {
+		t.Fatal("unmuting did not restore bell attention")
+	}
+	if got := sessionTabTitle(workspace.Tabs()[0]); got != "● Production" {
+		t.Fatalf("unmuted attention title = %q, want %q", got, "● Production")
+	}
+}
+
 func TestSessionWorkspaceGroupsPinnedRuntimesAtLeadingEdge(t *testing.T) {
 	workspace := newSessionWorkspace()
 	for _, id := range []string{"one", "two", "three", "four"} {

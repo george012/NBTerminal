@@ -47,11 +47,11 @@ func terminalContextMenuItems(terminal *uikit.UITerminalView, state uikit.Contex
 }
 
 type sessionTabMenuState struct {
-	selected, pinned, reconnectable, reopenable, closable, closeOthers, closeLeft, closeRight bool
+	selected, pinned, bellMuted, reconnectable, reopenable, closable, closeOthers, closeLeft, closeRight bool
 }
 
 type sessionTabMenuActions struct {
-	activate, rename, pin, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
+	activate, rename, pin, muteBell, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
 }
 
 func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMenuActions) []uikit.MenuItem {
@@ -65,10 +65,15 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	if state.pinned {
 		pinTitle = "Unpin Session"
 	}
+	bellTitle := "Mute Bell"
+	if state.bellMuted {
+		bellTitle = "Unmute Bell"
+	}
 	return []uikit.MenuItem{
 		{Title: "Activate Session", Flags: inactiveWhen(!state.selected), Callback: actions.activate},
 		{Title: "Rename Session…", Callback: actions.rename},
 		{Title: pinTitle, Callback: actions.pin},
+		{Title: bellTitle, Callback: actions.muteBell},
 		{Title: "Duplicate Session	Ctrl+Shift+D", Callback: actions.duplicate},
 		{Title: "Reconnect Session	Ctrl+Shift+R", Flags: inactiveWhen(state.reconnectable), Callback: actions.reconnect},
 		{Title: "Reopen Closed Session	Ctrl+Shift+T", Flags: inactiveWhen(state.reopenable) | fltk_bridge.MENU_DIVIDER, Callback: actions.reopen},
@@ -155,6 +160,7 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 		menu.SetMenu(sessionTabContextMenuItems(sessionTabMenuState{
 			selected:      index == a.sessions.ActiveIndex(),
 			pinned:        state.Pinned,
+			bellMuted:     state.BellMuted,
 			reconnectable: reconnectable,
 			reopenable:    a.sessions.CanReopenClosed(),
 			closable:      state.Status != sessionRunning && !state.Pinned,
@@ -165,6 +171,7 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 			activate: func() { a.activateSessionByID(request.ID) },
 			rename:   func() { a.openSessionRename(request.ID) },
 			pin:      func() { a.togglePinnedSession(request.ID) },
+			muteBell: func() { a.toggleSessionBell(request.ID) },
 			duplicate: func() {
 				if a.activateSessionByID(request.ID) {
 					a.duplicateActiveSession()
@@ -259,6 +266,24 @@ func (a *finalShellApp) togglePinnedSession(id string) {
 		a.setStatus(fmt.Sprintf("Unpinned %s", state.Profile.Name))
 	} else {
 		a.setStatus(fmt.Sprintf("Pinned %s", state.Profile.Name))
+	}
+}
+
+func (a *finalShellApp) toggleSessionBell(id string) {
+	index := a.sessionIndexByID(id)
+	if index < 0 {
+		return
+	}
+	state := a.sessions.Tabs()[index]
+	muted := !state.BellMuted
+	if !a.sessions.SetBellMuted(id, muted) {
+		return
+	}
+	a.refreshSessionTabs()
+	if muted {
+		a.setStatus(fmt.Sprintf("Muted bell for %s", state.Profile.Name))
+	} else {
+		a.setStatus(fmt.Sprintf("Unmuted bell for %s", state.Profile.Name))
 	}
 }
 

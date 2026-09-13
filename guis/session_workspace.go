@@ -26,6 +26,7 @@ type terminalTabState struct {
 	CustomTitle      string
 	CurrentDirectory string
 	NeedsAttention   bool
+	BellMuted        bool
 	Pinned           bool
 	Status           sessionStatus
 	RunID            string
@@ -251,7 +252,28 @@ func (w *sessionWorkspace) SetAttention(id string) bool {
 	}
 	for index := range w.tabs {
 		if w.tabs[index].ID == id {
+			if w.tabs[index].BellMuted {
+				return false
+			}
 			w.tabs[index].NeedsAttention = true
+			return true
+		}
+	}
+	return false
+}
+
+// SetBellMuted controls bell attention for one runtime only. Muting also
+// acknowledges an existing marker; saved connection profiles remain unchanged.
+func (w *sessionWorkspace) SetBellMuted(id string, muted bool) bool {
+	if w == nil || strings.TrimSpace(id) == "" {
+		return false
+	}
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			w.tabs[index].BellMuted = muted
+			if muted {
+				w.tabs[index].NeedsAttention = false
+			}
 			return true
 		}
 	}

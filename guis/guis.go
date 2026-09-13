@@ -2195,6 +2195,9 @@ func sessionTabTitle(state terminalTabState) string {
 	if state.NeedsAttention {
 		prefix = "● " + prefix
 	}
+	if state.BellMuted {
+		prefix = "M " + prefix
+	}
 	name := strings.TrimSpace(state.CustomTitle)
 	if name == "" {
 		name = strings.TrimSpace(state.TerminalTitle)
