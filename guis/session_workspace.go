@@ -27,6 +27,7 @@ type terminalTabState struct {
 	CurrentDirectory string
 	NeedsAttention   bool
 	BellMuted        bool
+	InputLocked      bool
 	Pinned           bool
 	Status           sessionStatus
 	RunID            string
@@ -274,6 +275,22 @@ func (w *sessionWorkspace) SetBellMuted(id string, muted bool) bool {
 			if muted {
 				w.tabs[index].NeedsAttention = false
 			}
+			return true
+		}
+	}
+	return false
+}
+
+// SetInputLocked makes one runtime read-only without changing its saved
+// connection. Fresh duplicates and reopened sessions intentionally start
+// unlocked because this is an ephemeral safety guard, not profile policy.
+func (w *sessionWorkspace) SetInputLocked(id string, locked bool) bool {
+	if w == nil || strings.TrimSpace(id) == "" {
+		return false
+	}
+	for index := range w.tabs {
+		if w.tabs[index].ID == id {
+			w.tabs[index].InputLocked = locked
 			return true
 		}
 	}

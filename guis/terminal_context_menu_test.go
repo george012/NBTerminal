@@ -23,8 +23,8 @@ func TestTerminalContextMenuReflectsSelectionAndRoutesCommands(t *testing.T) {
 	if items[1].Title != "Copy All Output	Ctrl+Shift+A" {
 		t.Fatalf("copy-all item title = %q", items[1].Title)
 	}
-	if items[2].Title != "Paste	Ctrl+Shift+V" || items[2].Flags&fltk_bridge.MENU_DIVIDER == 0 {
-		t.Fatalf("paste item = %#v, want Paste followed by divider", items[2])
+	if items[2].Title != "Paste	Ctrl+Shift+V" || items[2].Flags&fltk_bridge.MENU_DIVIDER == 0 || items[2].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+		t.Fatalf("paste item for locked input = %#v, want disabled Paste followed by divider", items[2])
 	}
 	if items[3].Title != "Find in Terminal	Ctrl+Shift+F" {
 		t.Fatalf("find item title = %q", items[3].Title)
@@ -48,9 +48,12 @@ func TestTerminalContextMenuReflectsSelectionAndRoutesCommands(t *testing.T) {
 		t.Fatalf("clear callback count = %d, want 1", cleared)
 	}
 
-	items = terminalContextMenuItems(terminal, uikit.ContextMenuState{HasSelection: true}, func() {}, func() {}, func() {})
+	items = terminalContextMenuItems(terminal, uikit.ContextMenuState{HasSelection: true, InputEnabled: true}, func() {}, func() {}, func() {})
 	if items[0].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 		t.Fatal("copy item stayed disabled for selected terminal text")
+	}
+	if items[2].Flags&fltk_bridge.MENU_INACTIVE != 0 {
+		t.Fatal("paste item stayed disabled for writable terminal")
 	}
 }
 
@@ -63,6 +66,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 			rename:      func() { invocations["rename"]++ },
 			pin:         func() { invocations["pin"]++ },
 			muteBell:    func() { invocations["mute-bell"]++ },
+			lockInput:   func() { invocations["lock-input"]++ },
 			duplicate:   func() { invocations["duplicate"]++ },
 			reconnect:   func() { invocations["reconnect"]++ },
 			reopen:      func() { invocations["reopen"]++ },
@@ -71,16 +75,16 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 			closeLeft:   func() { invocations["close-left"]++ },
 			closeRight:  func() { invocations["close-right"]++ },
 		})
-	if len(items) != 11 {
-		t.Fatalf("session context menu item count = %d, want 11", len(items))
+	if len(items) != 12 {
+		t.Fatalf("session context menu item count = %d, want 12", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Rename Session…", "Pin Session", "Mute Bell", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
+	for index, title := range []string{"Activate Session", "Rename Session…", "Pin Session", "Mute Bell", "Lock Input", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
 		items[index].Callback()
 	}
-	for _, action := range []string{"activate", "rename", "pin", "mute-bell", "duplicate", "reconnect", "reopen", "close", "close-others", "close-left", "close-right"} {
+	for _, action := range []string{"activate", "rename", "pin", "mute-bell", "lock-input", "duplicate", "reconnect", "reopen", "close", "close-others", "close-left", "close-right"} {
 		if invocations[action] != 1 {
 			t.Fatalf("%s callback count = %d, want 1", action, invocations[action])
 		}
@@ -90,26 +94,30 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	if items[0].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("active session kept Activate enabled")
 	}
-	if items[5].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[6].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("non-interactive session kept Reconnect enabled")
 	}
-	if items[6].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[7].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("empty close history kept Reopen enabled")
 	}
-	if items[7].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[8].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("running session kept Close enabled")
 	}
-	if items[8].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[9].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[10].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[9].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[10].Flags&fltk_bridge.MENU_INACTIVE == 0 || items[11].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatal("unavailable batch close actions remained enabled")
 	}
 
 	items = sessionTabContextMenuItems(sessionTabMenuState{pinned: true}, sessionTabMenuActions{})
-	if items[2].Title != "Unpin Session" || items[7].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[2].Title != "Unpin Session" || items[8].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatalf("pinned menu state = %#v", items)
 	}
 	items = sessionTabContextMenuItems(sessionTabMenuState{bellMuted: true}, sessionTabMenuActions{})
 	if items[3].Title != "Unmute Bell" {
 		t.Fatalf("muted bell menu title = %q", items[3].Title)
+	}
+	items = sessionTabContextMenuItems(sessionTabMenuState{inputLocked: true}, sessionTabMenuActions{})
+	if items[4].Title != "Unlock Input" {
+		t.Fatalf("locked input menu title = %q", items[4].Title)
 	}
 }
 

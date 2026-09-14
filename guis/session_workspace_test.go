@@ -231,6 +231,33 @@ func TestSessionWorkspaceMutedBellIgnoresAttentionAndClearsExistingMarker(t *tes
 	}
 }
 
+func TestSessionWorkspaceInputLockIsRuntimeOnlyAndVisibleInTabTitle(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "production", Name: "Production", Type: connectionTypeSSH})
+	state, _ := workspace.Active()
+
+	if !workspace.SetInputLocked(state.ID, true) {
+		t.Fatal("failed to lock runtime input")
+	}
+	locked, _ := workspace.Active()
+	if !locked.InputLocked || locked.Profile.ID != "production" {
+		t.Fatalf("runtime input lock state = %#v", locked)
+	}
+	if got := sessionTabTitle(locked); got != "L Production" {
+		t.Fatalf("locked tab title = %q, want %q", got, "L Production")
+	}
+	if workspace.SetInputLocked("missing", true) {
+		t.Fatal("unknown runtime accepted an input lock")
+	}
+	if _, ok := workspace.DuplicateActive(); !ok {
+		t.Fatal("failed to duplicate locked runtime")
+	}
+	duplicate, _ := workspace.Active()
+	if duplicate.InputLocked {
+		t.Fatal("fresh duplicate inherited runtime-only input lock")
+	}
+}
+
 func TestSessionWorkspaceGroupsPinnedRuntimesAtLeadingEdge(t *testing.T) {
 	workspace := newSessionWorkspace()
 	for _, id := range []string{"one", "two", "three", "four"} {

@@ -189,6 +189,32 @@ func TestRunInteractiveCommandPersistsSubmittedCommandHistory(t *testing.T) {
 	}
 }
 
+func TestLockedRuntimeRejectsTerminalAndComposerInputBeforeTransport(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "production", Name: "Production", Type: connectionTypeLocal})
+	state, _ := workspace.Active()
+	if !workspace.SetInputLocked(state.ID, true) {
+		t.Fatal("failed to lock runtime input")
+	}
+	registry := newInteractiveRuntimeRegistry()
+	fake := newFakeInteractiveSession()
+	if err := registry.Start(context.Background(), state.ID, fake, terminal.TerminalSize{Columns: 80, Rows: 24}); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(registry.CloseAll)
+	app := &finalShellApp{sessions: workspace, interactive: registry}
+
+	app.writeActiveTerminalInput([]byte("blocked keyboard"))
+	if !app.runInteractiveCommand("blocked composer") {
+		t.Fatal("locked interactive command was not handled as a rejection")
+	}
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	if len(fake.inputs) != 0 {
+		t.Fatalf("locked runtime reached transport: %q", fake.inputs)
+	}
+}
+
 func TestRunInteractiveSSHCommandUsesLongLivedRuntimeAndSSHHistory(t *testing.T) {
 	profile := connectionProfile{ID: "remote", Name: "Remote", Type: connectionTypeSSH}
 	workspace := newSessionWorkspace()

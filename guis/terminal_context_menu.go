@@ -13,6 +13,10 @@ func terminalContextMenuItems(terminal *uikit.UITerminalView, state uikit.Contex
 	if !state.HasSelection {
 		copyFlags = fltk_bridge.MENU_INACTIVE
 	}
+	pasteFlags := fltk_bridge.MENU_DIVIDER
+	if !state.InputEnabled {
+		pasteFlags |= fltk_bridge.MENU_INACTIVE
+	}
 	return []uikit.MenuItem{
 		{
 			Title: "Copy	Ctrl+Shift+C",
@@ -33,7 +37,7 @@ func terminalContextMenuItems(terminal *uikit.UITerminalView, state uikit.Contex
 		},
 		{
 			Title: "Paste	Ctrl+Shift+V",
-			Flags: fltk_bridge.MENU_DIVIDER,
+			Flags: pasteFlags,
 			Callback: func() {
 				if terminal != nil {
 					terminal.PasteClipboard()
@@ -47,11 +51,11 @@ func terminalContextMenuItems(terminal *uikit.UITerminalView, state uikit.Contex
 }
 
 type sessionTabMenuState struct {
-	selected, pinned, bellMuted, reconnectable, reopenable, closable, closeOthers, closeLeft, closeRight bool
+	selected, pinned, bellMuted, inputLocked, reconnectable, reopenable, closable, closeOthers, closeLeft, closeRight bool
 }
 
 type sessionTabMenuActions struct {
-	activate, rename, pin, muteBell, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
+	activate, rename, pin, muteBell, lockInput, duplicate, reconnect, reopen, close, closeOthers, closeLeft, closeRight func()
 }
 
 func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMenuActions) []uikit.MenuItem {
@@ -69,11 +73,16 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	if state.bellMuted {
 		bellTitle = "Unmute Bell"
 	}
+	inputTitle := "Lock Input"
+	if state.inputLocked {
+		inputTitle = "Unlock Input"
+	}
 	return []uikit.MenuItem{
 		{Title: "Activate Session", Flags: inactiveWhen(!state.selected), Callback: actions.activate},
 		{Title: "Rename Session…", Callback: actions.rename},
 		{Title: pinTitle, Callback: actions.pin},
 		{Title: bellTitle, Callback: actions.muteBell},
+		{Title: inputTitle, Callback: actions.lockInput},
 		{Title: "Duplicate Session	Ctrl+Shift+D", Callback: actions.duplicate},
 		{Title: "Reconnect Session	Ctrl+Shift+R", Flags: inactiveWhen(state.reconnectable), Callback: actions.reconnect},
 		{Title: "Reopen Closed Session	Ctrl+Shift+T", Flags: inactiveWhen(state.reopenable) | fltk_bridge.MENU_DIVIDER, Callback: actions.reopen},
@@ -161,6 +170,7 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 			selected:      index == a.sessions.ActiveIndex(),
 			pinned:        state.Pinned,
 			bellMuted:     state.BellMuted,
+			inputLocked:   state.InputLocked,
 			reconnectable: reconnectable,
 			reopenable:    a.sessions.CanReopenClosed(),
 			closable:      state.Status != sessionRunning && !state.Pinned,
@@ -168,10 +178,11 @@ func (a *finalShellApp) installSessionTabContextMenu(parent *uikit.UIGroup) {
 			closeLeft:     a.canCloseSessionsToLeft(request.ID),
 			closeRight:    a.canCloseSessionsToRight(request.ID),
 		}, sessionTabMenuActions{
-			activate: func() { a.activateSessionByID(request.ID) },
-			rename:   func() { a.openSessionRename(request.ID) },
-			pin:      func() { a.togglePinnedSession(request.ID) },
-			muteBell: func() { a.toggleSessionBell(request.ID) },
+			activate:  func() { a.activateSessionByID(request.ID) },
+			rename:    func() { a.openSessionRename(request.ID) },
+			pin:       func() { a.togglePinnedSession(request.ID) },
+			muteBell:  func() { a.toggleSessionBell(request.ID) },
+			lockInput: func() { a.toggleSessionInputLock(request.ID) },
 			duplicate: func() {
 				if a.activateSessionByID(request.ID) {
 					a.duplicateActiveSession()
@@ -284,6 +295,28 @@ func (a *finalShellApp) toggleSessionBell(id string) {
 		a.setStatus(fmt.Sprintf("Muted bell for %s", state.Profile.Name))
 	} else {
 		a.setStatus(fmt.Sprintf("Unmuted bell for %s", state.Profile.Name))
+	}
+}
+
+func (a *finalShellApp) toggleSessionInputLock(id string) {
+	index := a.sessionIndexByID(id)
+	if index < 0 {
+		return
+	}
+	state := a.sessions.Tabs()[index]
+	locked := !state.InputLocked
+	if !a.sessions.SetInputLocked(id, locked) {
+		return
+	}
+	if index == a.sessions.ActiveIndex() && a.output != nil {
+		a.output.SetInputEnabled(!locked)
+		a.updateCommandControls()
+	}
+	a.refreshSessionTabs()
+	if locked {
+		a.setStatus(fmt.Sprintf("Locked input for %s", state.Profile.Name))
+	} else {
+		a.setStatus(fmt.Sprintf("Unlocked input for %s", state.Profile.Name))
 	}
 }
 

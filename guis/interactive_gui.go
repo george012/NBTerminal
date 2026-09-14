@@ -180,6 +180,10 @@ func (a *finalShellApp) writeActiveTerminalInput(data []byte) {
 	if sessionID == "" || !a.interactive.Has(sessionID) {
 		return
 	}
+	if state, ok := a.sessions.Active(); ok && state.ID == sessionID && state.InputLocked {
+		a.setStatus("Terminal input is locked")
+		return
+	}
 	if err := a.interactive.WriteInput(sessionID, data); err != nil {
 		gtbox_log.LogErrorf("write interactive terminal input failed: %s", err.Error())
 		a.setStatus(tr("status.shell_input_failed"))
@@ -298,6 +302,10 @@ func (a *finalShellApp) runInteractiveCommand(command string) bool {
 	if !ok || (state.Profile.Type != connectionTypeLocal && state.Profile.Type != connectionTypeSSH) {
 		return false
 	}
+	if state.InputLocked {
+		a.setStatus("Terminal input is locked")
+		return true
+	}
 	if err := a.startInteractiveSession(state); err != nil {
 		a.appendSessionOutput(state.ID, trf("output.session_shell_start_failed", err.Error()))
 		a.setStatus(tr("status.session_shell_start_failed"))
@@ -340,6 +348,7 @@ func (a *finalShellApp) configureActiveTerminalMode(state terminalTabState, ok b
 		return
 	}
 	interactive := ok && a.interactive != nil && a.interactive.Has(state.ID)
+	a.output.SetInputEnabled(!ok || !state.InputLocked)
 	if interactive {
 		a.output.Raw().SetHorizontalScrollbar(fltk_bridge.TerminalScrollbarOff)
 	} else {

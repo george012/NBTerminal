@@ -2198,6 +2198,9 @@ func sessionTabTitle(state terminalTabState) string {
 	if state.BellMuted {
 		prefix = "M " + prefix
 	}
+	if state.InputLocked {
+		prefix = "L " + prefix
+	}
 	name := strings.TrimSpace(state.CustomTitle)
 	if name == "" {
 		name = strings.TrimSpace(state.TerminalTitle)
@@ -2786,8 +2789,14 @@ func (a *finalShellApp) stopCommand() {
 func (a *finalShellApp) updateCommandControls() {
 	running := a.commandRunningForSession(a.activeSessionID())
 	interactive := a.interactive != nil && a.interactive.Has(a.activeSessionID())
+	locked := false
+	if a.sessions != nil {
+		if state, ok := a.sessions.Active(); ok {
+			locked = state.InputLocked
+		}
+	}
 	if a.runButton != nil && a.runButton.Raw() != nil {
-		if running {
+		if running || locked {
 			a.runButton.Raw().Deactivate()
 		} else {
 			a.runButton.Raw().Activate()
