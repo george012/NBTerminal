@@ -465,6 +465,7 @@ type finalShellApp struct {
 	terminalTitle       *uikit.UILabel
 	terminalSubtitle    *uikit.UILabel
 	commandLabel        *uikit.UILabel
+	newShellButton      *uikit.UIButton
 	closeTabButton      *uikit.UIButton
 	historyButton       *uikit.UIButton
 	lastButton          *uikit.UIButton
@@ -844,6 +845,10 @@ func (a *finalShellApp) build() {
 	rightPanel.AddSubview(a.terminalTitle)
 	a.terminalSubtitle = mutedLabel(terminalLayout.Subtitle.X, terminalLayout.Subtitle.Y, terminalLayout.Subtitle.Width, terminalLayout.Subtitle.Height, tr("terminal.subtitle"))
 	rightPanel.AddSubview(a.terminalSubtitle)
+	a.newShellButton = button(terminalLayout.NewShell.X, terminalLayout.NewShell.Y, terminalLayout.NewShell.Width, terminalLayout.NewShell.Height, "New Shell", "terminal.new_shell", a.openQuickLocalSession)
+	a.newShellButton.View().SetAutomationName("Open Local Shell · Ctrl+Shift+N")
+	a.newShellButton.View().SetTooltip("Open Local Shell (Ctrl+Shift+N)")
+	rightPanel.AddSubview(a.newShellButton)
 	a.closeTabButton = button(terminalLayout.CloseTab.X, terminalLayout.CloseTab.Y, terminalLayout.CloseTab.Width, terminalLayout.CloseTab.Height, tr("session.close"), "terminal.session_close", a.closeActiveSession)
 	a.closeTabButton.View().SetAutomationName(tr("session.close") + " · Ctrl+W")
 	a.closeTabButton.View().SetTooltip("Close Active Session (Ctrl+W)")
@@ -1305,6 +1310,9 @@ func (a *finalShellApp) layoutTerminalPanel() {
 	}
 	if a.terminalSubtitle != nil && a.terminalSubtitle.Raw() != nil {
 		a.terminalSubtitle.Raw().Resize(layout.Subtitle.X, layout.Subtitle.Y, layout.Subtitle.Width, layout.Subtitle.Height)
+	}
+	if a.newShellButton != nil && a.newShellButton.Raw() != nil {
+		a.newShellButton.Raw().Resize(layout.NewShell.X, layout.NewShell.Y, layout.NewShell.Width, layout.NewShell.Height)
 	}
 	if a.closeTabButton != nil && a.closeTabButton.Raw() != nil {
 		a.closeTabButton.Raw().Resize(layout.CloseTab.X, layout.CloseTab.Y, layout.CloseTab.Width, layout.CloseTab.Height)

@@ -98,7 +98,7 @@ func mainWindowLayoutFor(bounds layoutRect, tokens controlMetricSet) mainWindowL
 // workspace. At the minimum desktop width, secondary actions move to their own
 // row instead of letting FLTK proportionally crush localized button labels.
 type terminalPanelLayout struct {
-	Title, Subtitle, CloseTab, Tabs, Output                layoutRect
+	Title, Subtitle, NewShell, CloseTab, Tabs, Output      layoutRect
 	History, Last, Clear, CommandLabel, Command, Stop, Run layoutRect
 	Compact                                                bool
 }
@@ -108,6 +108,7 @@ func terminalPanelLayoutFor(panel layoutRect, tokens controlMetricSet) terminalP
 		inset          = 18
 		gap            = 8
 		groupGap       = 14
+		newShellWidth  = 112
 		closeWidth     = 150
 		historyWidth   = 86
 		lastWidth      = 64
@@ -139,10 +140,13 @@ func terminalPanelLayoutFor(panel layoutRect, tokens controlMetricSet) terminalP
 		outputBottom = history.Y - 14
 	}
 	outputY := panel.Y + 108
+	closeTab := layoutRect{X: panel.X + panel.Width - inset - closeWidth, Y: panel.Y + 18, Width: closeWidth, Height: tokens.ButtonHeight}
+	newShell := layoutRect{X: closeTab.X - gap - newShellWidth, Y: closeTab.Y, Width: newShellWidth, Height: tokens.ButtonHeight}
 	return terminalPanelLayout{
-		Title:        layoutRect{X: panel.X + inset, Y: panel.Y + 14, Width: panel.Width - inset*2 - closeWidth - 12, Height: 24},
+		Title:        layoutRect{X: panel.X + inset, Y: panel.Y + 14, Width: newShell.X - gap - (panel.X + inset), Height: 24},
 		Subtitle:     layoutRect{X: panel.X + inset, Y: panel.Y + 38, Width: panel.Width - inset*2, Height: 18},
-		CloseTab:     layoutRect{X: panel.X + panel.Width - inset - closeWidth, Y: panel.Y + 18, Width: closeWidth, Height: tokens.ButtonHeight},
+		NewShell:     newShell,
+		CloseTab:     closeTab,
 		Tabs:         layoutRect{X: panel.X + inset, Y: panel.Y + 62, Width: panel.Width - inset*2, Height: 40},
 		Output:       layoutRect{X: panel.X + inset, Y: outputY, Width: panel.Width - inset*2, Height: outputBottom - outputY},
 		History:      history,

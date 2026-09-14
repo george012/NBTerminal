@@ -139,6 +139,27 @@ func TestTerminalPanelLayoutKeepsWideCommandBarOnOneRow(t *testing.T) {
 	}
 }
 
+func TestTerminalPanelLayoutKeepsNewShellAndCloseActionsDiscoverable(t *testing.T) {
+	for _, panel := range []layoutRect{
+		{X: 530, Y: 72, Width: 568, Height: 606},
+		{X: 536, Y: 72, Width: 882, Height: 786},
+	} {
+		layout := terminalPanelLayoutFor(panel, nativeControls)
+		if layout.NewShell.Height != nativeControls.ButtonHeight || layout.CloseTab.Height != nativeControls.ButtonHeight {
+			t.Fatalf("session actions lost native button height: %#v", layout)
+		}
+		if layout.NewShell.Width < 112 || layout.CloseTab.Width < 150 {
+			t.Fatalf("session actions cannot carry their labels: new=%#v close=%#v", layout.NewShell, layout.CloseTab)
+		}
+		if layout.NewShell.X+layout.NewShell.Width > layout.CloseTab.X-nativeControls.FieldLabelGap {
+			t.Fatalf("session actions overlap: new=%#v close=%#v", layout.NewShell, layout.CloseTab)
+		}
+		if layout.Title.X+layout.Title.Width > layout.NewShell.X-nativeControls.FieldLabelGap {
+			t.Fatalf("terminal title overlaps session actions: title=%#v new=%#v", layout.Title, layout.NewShell)
+		}
+	}
+}
+
 func TestQuickPanelLayoutKeepsMainWindowFocusedOnQuickLaunchAtMinimumSize(t *testing.T) {
 	panel := layoutRect{X: 22, Y: 72, Width: 500, Height: 606}
 	layout := quickPanelLayoutFor(panel, nativeControls)
