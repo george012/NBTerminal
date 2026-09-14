@@ -71,6 +71,7 @@ func TestRegisterDefaultApplicationShortcutsRoutesEveryCommand(t *testing.T) {
 		ReopenSession:      func() { invocations["reopen-session"]++ },
 		ReconnectSession:   func() { invocations["reconnect-session"]++ },
 		DuplicateSession:   func() { invocations["duplicate-session"]++ },
+		ToggleInputLock:    func() { invocations["toggle-input-lock"]++ },
 		MoveSessionLeft:    func() { invocations["move-session-left"]++ },
 		MoveSessionRight:   func() { invocations["move-session-right"]++ },
 		SelectSession:      func(index int) { invocations[fmt.Sprintf("select-session-%d", index)]++ },
@@ -98,6 +99,7 @@ func TestRegisterDefaultApplicationShortcutsRoutesEveryCommand(t *testing.T) {
 		fltk_bridge.CTRL + fltk_bridge.SHIFT + int('t'):              "reopen-session",
 		fltk_bridge.CTRL + fltk_bridge.SHIFT + int('r'):              "reconnect-session",
 		fltk_bridge.CTRL + fltk_bridge.SHIFT + int('d'):              "duplicate-session",
+		fltk_bridge.CTRL + fltk_bridge.SHIFT + int('i'):              "toggle-input-lock",
 		fltk_bridge.CTRL + fltk_bridge.SHIFT + fltk_bridge.PAGE_UP:   "move-session-left",
 		fltk_bridge.CTRL + fltk_bridge.SHIFT + fltk_bridge.PAGE_DOWN: "move-session-right",
 	}

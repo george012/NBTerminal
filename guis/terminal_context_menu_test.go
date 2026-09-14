@@ -78,7 +78,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	if len(items) != 12 {
 		t.Fatalf("session context menu item count = %d, want 12", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Rename Session…", "Pin Session", "Mute Bell", "Lock Input", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
+	for index, title := range []string{"Activate Session", "Rename Session…", "Pin Session", "Mute Bell", "Lock Input	Ctrl+Shift+I", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
@@ -116,8 +116,8 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 		t.Fatalf("muted bell menu title = %q", items[3].Title)
 	}
 	items = sessionTabContextMenuItems(sessionTabMenuState{inputLocked: true}, sessionTabMenuActions{})
-	if items[4].Title != "Unlock Input" {
-		t.Fatalf("locked input menu title = %q", items[4].Title)
+	if items[4].Title != "Unlock Input	Ctrl+Shift+I" {
+		t.Fatalf("input unlock item title = %q", items[4].Title)
 	}
 }
 
@@ -146,6 +146,24 @@ func TestSessionTabListMenuMarksActiveAndPinnedAndRoutesStableIdentity(t *testin
 	}
 	if got := sessionTabListMenuTitle("\x00\n"); got != "Session" {
 		t.Fatalf("empty menu-safe shell title = %q", got)
+	}
+}
+
+func TestToggleActiveSessionInputLockTargetsOnlySelectedRuntime(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "two", Name: "Two", Type: connectionTypeLocal})
+	workspace.Select(0)
+	app := &finalShellApp{sessions: workspace}
+
+	app.toggleActiveSessionInputLock()
+	tabs := workspace.Tabs()
+	if !tabs[0].InputLocked || tabs[1].InputLocked {
+		t.Fatalf("shortcut lock state = %#v, want only selected runtime locked", tabs)
+	}
+	app.toggleActiveSessionInputLock()
+	if workspace.Tabs()[0].InputLocked {
+		t.Fatal("second shortcut invocation did not unlock selected runtime")
 	}
 }
 

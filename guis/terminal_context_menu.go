@@ -73,9 +73,9 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	if state.bellMuted {
 		bellTitle = "Unmute Bell"
 	}
-	inputTitle := "Lock Input"
+	inputTitle := "Lock Input	Ctrl+Shift+I"
 	if state.inputLocked {
-		inputTitle = "Unlock Input"
+		inputTitle = "Unlock Input	Ctrl+Shift+I"
 	}
 	return []uikit.MenuItem{
 		{Title: "Activate Session", Flags: inactiveWhen(!state.selected), Callback: actions.activate},
@@ -317,6 +317,12 @@ func (a *finalShellApp) toggleSessionInputLock(id string) {
 		a.setStatus(fmt.Sprintf("Locked input for %s", state.Profile.Name))
 	} else {
 		a.setStatus(fmt.Sprintf("Unlocked input for %s", state.Profile.Name))
+	}
+}
+
+func (a *finalShellApp) toggleActiveSessionInputLock() {
+	if id := a.activeSessionID(); id != "" {
+		a.toggleSessionInputLock(id)
 	}
 }
 

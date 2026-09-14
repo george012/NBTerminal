@@ -921,6 +921,7 @@ func (a *finalShellApp) build() {
 		ReopenSession:      a.reopenLastClosedSession,
 		ReconnectSession:   a.reconnectActiveSession,
 		DuplicateSession:   a.duplicateActiveSession,
+		ToggleInputLock:    a.toggleActiveSessionInputLock,
 		MoveSessionLeft:    func() { a.moveActiveSession(-1) },
 		MoveSessionRight:   func() { a.moveActiveSession(1) },
 		SelectSession:      a.selectSessionAt,
