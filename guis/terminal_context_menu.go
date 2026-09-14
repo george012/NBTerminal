@@ -73,6 +73,7 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	if state.bellMuted {
 		bellTitle = "Unmute Bell"
 	}
+	bellTitle += "	Ctrl+Shift+B"
 	inputTitle := "Lock Input	Ctrl+Shift+I"
 	if state.inputLocked {
 		inputTitle = "Unlock Input	Ctrl+Shift+I"
@@ -323,6 +324,12 @@ func (a *finalShellApp) toggleSessionInputLock(id string) {
 func (a *finalShellApp) toggleActiveSessionInputLock() {
 	if id := a.activeSessionID(); id != "" {
 		a.toggleSessionInputLock(id)
+	}
+}
+
+func (a *finalShellApp) toggleActiveSessionBellMute() {
+	if id := a.activeSessionID(); id != "" {
+		a.toggleSessionBell(id)
 	}
 }
 

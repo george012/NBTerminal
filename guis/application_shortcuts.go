@@ -32,6 +32,7 @@ type applicationShortcutActions struct {
 	ReopenSession      func()
 	ReconnectSession   func()
 	DuplicateSession   func()
+	ToggleBellMute     func()
 	ToggleInputLock    func()
 	MoveSessionLeft    func()
 	MoveSessionRight   func()
@@ -60,6 +61,7 @@ func registerApplicationShortcut(window, terminal applicationShortcutRegistrar, 
 // Ctrl+Shift+F opens retained-output search, F3 / Shift+F3 repeat it in either
 // direction,
 // Ctrl+Shift+D opens the active profile in an independent runtime tab,
+// Ctrl+Shift+B toggles bell notifications for the active runtime,
 // Ctrl+Shift+I toggles the active runtime's input safety lock, and
 // Ctrl+Shift+PageUp/PageDown moves the active runtime without replacing it.
 // Alt+1 through Alt+9 select a runtime tab directly without sending an escape
@@ -87,6 +89,7 @@ func registerDefaultApplicationShortcuts(window, terminal applicationShortcutReg
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('t'), actions.ReopenSession)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('r'), actions.ReconnectSession)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('d'), actions.DuplicateSession)
+	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('b'), actions.ToggleBellMute)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+int('i'), actions.ToggleInputLock)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+fltk_bridge.PAGE_UP, actions.MoveSessionLeft)
 	registerApplicationShortcut(window, terminal, fltk_bridge.CTRL+fltk_bridge.SHIFT+fltk_bridge.PAGE_DOWN, actions.MoveSessionRight)

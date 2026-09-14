@@ -78,7 +78,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	if len(items) != 12 {
 		t.Fatalf("session context menu item count = %d, want 12", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Rename Session…", "Pin Session", "Mute Bell", "Lock Input	Ctrl+Shift+I", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
+	for index, title := range []string{"Activate Session", "Rename Session…", "Pin Session", "Mute Bell	Ctrl+Shift+B", "Lock Input	Ctrl+Shift+I", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
@@ -112,7 +112,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 		t.Fatalf("pinned menu state = %#v", items)
 	}
 	items = sessionTabContextMenuItems(sessionTabMenuState{bellMuted: true}, sessionTabMenuActions{})
-	if items[3].Title != "Unmute Bell" {
+	if items[3].Title != "Unmute Bell	Ctrl+Shift+B" {
 		t.Fatalf("muted bell menu title = %q", items[3].Title)
 	}
 	items = sessionTabContextMenuItems(sessionTabMenuState{inputLocked: true}, sessionTabMenuActions{})
@@ -164,6 +164,24 @@ func TestToggleActiveSessionInputLockTargetsOnlySelectedRuntime(t *testing.T) {
 	app.toggleActiveSessionInputLock()
 	if workspace.Tabs()[0].InputLocked {
 		t.Fatal("second shortcut invocation did not unlock selected runtime")
+	}
+}
+
+func TestToggleActiveSessionBellMuteTargetsOnlySelectedRuntime(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "two", Name: "Two", Type: connectionTypeLocal})
+	workspace.Select(0)
+	app := &finalShellApp{sessions: workspace}
+
+	app.toggleActiveSessionBellMute()
+	tabs := workspace.Tabs()
+	if !tabs[0].BellMuted || tabs[1].BellMuted {
+		t.Fatalf("shortcut bell state = %#v, want only selected runtime muted", tabs)
+	}
+	app.toggleActiveSessionBellMute()
+	if workspace.Tabs()[0].BellMuted {
+		t.Fatal("second shortcut invocation did not unmute selected runtime")
 	}
 }
 

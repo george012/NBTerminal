@@ -926,6 +926,7 @@ func (a *finalShellApp) build() {
 		ReopenSession:      a.reopenLastClosedSession,
 		ReconnectSession:   a.reconnectActiveSession,
 		DuplicateSession:   a.duplicateActiveSession,
+		ToggleBellMute:     a.toggleActiveSessionBellMute,
 		ToggleInputLock:    a.toggleActiveSessionInputLock,
 		MoveSessionLeft:    func() { a.moveActiveSession(-1) },
 		MoveSessionRight:   func() { a.moveActiveSession(1) },
