@@ -5,6 +5,21 @@ import (
 	"testing"
 )
 
+func TestOpenActiveSessionRenameTargetsStableRuntime(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "first", Name: "First", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "second", Name: "Second", Type: connectionTypeLocal})
+	workspace.Select(0)
+	app := &finalShellApp{sessions: workspace}
+
+	app.openActiveSessionRename()
+
+	if app.sessionRename == nil || app.sessionRename.sessionID != "runtime-1" {
+		t.Fatalf("rename dialog target = %#v, want active runtime-1", app.sessionRename)
+	}
+	app.sessionRename.close()
+}
+
 func TestNormalizeSessionCustomTitle(t *testing.T) {
 	if got, err := normalizeSessionCustomTitle("  Incident 桥接  "); err != nil || got != "Incident 桥接" {
 		t.Fatalf("normalized title = %q, err=%v", got, err)

@@ -56,6 +56,20 @@ func (a *finalShellApp) openSessionRename(sessionID string) {
 	dialog.build()
 }
 
+// openActiveSessionRename resolves the current stable runtime identity at the
+// moment F2 is handled. The dialog keeps that identity, so later tab selection
+// changes cannot rename a different session accidentally.
+func (a *finalShellApp) openActiveSessionRename() {
+	if a == nil || a.sessions == nil {
+		return
+	}
+	state, ok := a.sessions.Active()
+	if !ok {
+		return
+	}
+	a.openSessionRename(state.ID)
+}
+
 func (d *sessionRenameWindow) build() {
 	if d == nil || d.owner == nil {
 		return

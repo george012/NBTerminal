@@ -80,7 +80,7 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	}
 	return []uikit.MenuItem{
 		{Title: "Activate Session", Flags: inactiveWhen(!state.selected), Callback: actions.activate},
-		{Title: "Rename Session…", Callback: actions.rename},
+		{Title: "Rename Session…	F2", Callback: actions.rename},
 		{Title: pinTitle, Callback: actions.pin},
 		{Title: bellTitle, Callback: actions.muteBell},
 		{Title: inputTitle, Callback: actions.lockInput},

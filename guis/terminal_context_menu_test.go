@@ -78,7 +78,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	if len(items) != 12 {
 		t.Fatalf("session context menu item count = %d, want 12", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Rename Session…", "Pin Session", "Mute Bell	Ctrl+Shift+B", "Lock Input	Ctrl+Shift+I", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
+	for index, title := range []string{"Activate Session", "Rename Session…	F2", "Pin Session", "Mute Bell	Ctrl+Shift+B", "Lock Input	Ctrl+Shift+I", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
