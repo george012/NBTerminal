@@ -78,7 +78,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	if len(items) != 12 {
 		t.Fatalf("session context menu item count = %d, want 12", len(items))
 	}
-	for index, title := range []string{"Activate Session", "Rename Session…	F2", "Pin Session", "Mute Bell	Ctrl+Shift+B", "Lock Input	Ctrl+Shift+I", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
+	for index, title := range []string{"Activate Session", "Rename Session…	F2", "Pin Session	Ctrl+Shift+P", "Mute Bell	Ctrl+Shift+B", "Lock Input	Ctrl+Shift+I", "Duplicate Session	Ctrl+Shift+D", "Reconnect Session	Ctrl+Shift+R", "Reopen Closed Session	Ctrl+Shift+T", "Close Session	Ctrl+W", "Close Other Sessions", "Close Sessions to the Left", "Close Sessions to the Right"} {
 		if items[index].Title != title || items[index].Flags&fltk_bridge.MENU_INACTIVE != 0 {
 			t.Fatalf("session item %d = %#v", index, items[index])
 		}
@@ -108,7 +108,7 @@ func TestSessionTabContextMenuReflectsRuntimeStateAndRoutesCommands(t *testing.T
 	}
 
 	items = sessionTabContextMenuItems(sessionTabMenuState{pinned: true}, sessionTabMenuActions{})
-	if items[2].Title != "Unpin Session" || items[8].Flags&fltk_bridge.MENU_INACTIVE == 0 {
+	if items[2].Title != "Unpin Session	Ctrl+Shift+P" || items[8].Flags&fltk_bridge.MENU_INACTIVE == 0 {
 		t.Fatalf("pinned menu state = %#v", items)
 	}
 	items = sessionTabContextMenuItems(sessionTabMenuState{bellMuted: true}, sessionTabMenuActions{})
@@ -182,6 +182,25 @@ func TestToggleActiveSessionBellMuteTargetsOnlySelectedRuntime(t *testing.T) {
 	app.toggleActiveSessionBellMute()
 	if workspace.Tabs()[0].BellMuted {
 		t.Fatal("second shortcut invocation did not unmute selected runtime")
+	}
+}
+
+func TestToggleActiveSessionPinnedTargetsOnlySelectedRuntime(t *testing.T) {
+	workspace := newSessionWorkspace()
+	workspace.Open(connectionProfile{ID: "one", Name: "One", Type: connectionTypeLocal})
+	workspace.Open(connectionProfile{ID: "two", Name: "Two", Type: connectionTypeLocal})
+	workspace.Select(1)
+	app := &finalShellApp{sessions: workspace}
+
+	app.toggleActiveSessionPinned()
+	tabs := workspace.Tabs()
+	if !tabs[0].Pinned || tabs[0].ID != "runtime-2" || tabs[1].Pinned || workspace.ActiveIndex() != 0 {
+		t.Fatalf("shortcut pin state = %#v active=%d, want selected runtime pinned at partition front", tabs, workspace.ActiveIndex())
+	}
+	app.toggleActiveSessionPinned()
+	tabs = workspace.Tabs()
+	if tabs[0].Pinned || tabs[0].ID != "runtime-2" || workspace.ActiveIndex() != 0 {
+		t.Fatalf("second shortcut invocation did not unpin selected runtime at ordinary boundary: %#v active=%d", tabs, workspace.ActiveIndex())
 	}
 }
 

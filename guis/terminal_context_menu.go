@@ -69,6 +69,7 @@ func sessionTabContextMenuItems(state sessionTabMenuState, actions sessionTabMen
 	if state.pinned {
 		pinTitle = "Unpin Session"
 	}
+	pinTitle += "	Ctrl+Shift+P"
 	bellTitle := "Mute Bell"
 	if state.bellMuted {
 		bellTitle = "Unmute Bell"
@@ -324,6 +325,12 @@ func (a *finalShellApp) toggleSessionInputLock(id string) {
 func (a *finalShellApp) toggleActiveSessionInputLock() {
 	if id := a.activeSessionID(); id != "" {
 		a.toggleSessionInputLock(id)
+	}
+}
+
+func (a *finalShellApp) toggleActiveSessionPinned() {
+	if id := a.activeSessionID(); id != "" {
+		a.togglePinnedSession(id)
 	}
 }
 
