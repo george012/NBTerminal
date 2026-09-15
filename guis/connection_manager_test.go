@@ -15,6 +15,52 @@ import (
 	"github.com/george012/gtbox"
 )
 
+func TestConnectionManagerRowContextMenuReflectsFavoriteAndRoutesCommands(t *testing.T) {
+	invocations := map[string]int{}
+	items := connectionContextMenuItems(false, connectionContextMenuActions{
+		connect:   func() { invocations["connect"]++ },
+		edit:      func() { invocations["edit"]++ },
+		duplicate: func() { invocations["duplicate"]++ },
+		test:      func() { invocations["test"]++ },
+		favorite:  func() { invocations["favorite"]++ },
+		delete:    func() { invocations["delete"]++ },
+	})
+	want := []string{"Connect", "Edit…", "Duplicate…", "Test Connection", "Add to Favorites", "Delete…"}
+	if len(items) != len(want) {
+		t.Fatalf("context menu item count = %d, want %d", len(items), len(want))
+	}
+	for index, title := range want {
+		if items[index].Title != title || items[index].Callback == nil {
+			t.Fatalf("context menu item %d = %#v", index, items[index])
+		}
+		items[index].Callback()
+	}
+	for _, action := range []string{"connect", "edit", "duplicate", "test", "favorite", "delete"} {
+		if invocations[action] != 1 {
+			t.Fatalf("%s callback count = %d, want 1", action, invocations[action])
+		}
+	}
+	items = connectionContextMenuItems(true, connectionContextMenuActions{})
+	if items[4].Title != "Remove from Favorites" {
+		t.Fatalf("favorite menu title = %q", items[4].Title)
+	}
+}
+
+func TestConnectionManagerContextActionResolvesStableProfileAfterRowsChange(t *testing.T) {
+	manager := &connectionManagerWindow{rows: []connectionProfile{{ID: "alpha"}, {ID: "beta"}}, idx: 0}
+	if !manager.selectContextProfile("beta") || manager.idx != 1 {
+		t.Fatalf("initial stable selection = %d, want 1", manager.idx)
+	}
+	manager.rows = []connectionProfile{{ID: "beta"}, {ID: "alpha"}}
+	manager.idx = 1
+	if !manager.selectContextProfile("beta") || manager.idx != 0 {
+		t.Fatalf("reordered stable selection = %d, want 0", manager.idx)
+	}
+	if manager.selectContextProfile("missing") || manager.idx != 0 {
+		t.Fatal("missing stable profile changed selection")
+	}
+}
+
 func TestConnectionDeleteConfirmationIsLocalizedAndDefaultsToCancel(t *testing.T) {
 	previous := locales.CurrentLanguage()
 	t.Cleanup(func() { locales.ResetLocaleLanguage(previous.LanguageTag()) })

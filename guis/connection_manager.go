@@ -32,6 +32,7 @@ type connectionManagerWindow struct {
 	search            *uikit.Input
 	table             *uikit.UITableView
 	model             *tableModel
+	contextMenu       *uikit.UIContextMenu
 	rows              []connectionProfile
 	idx               int
 	status            *uikit.UILabel
@@ -126,6 +127,7 @@ func (m *connectionManagerWindow) build() {
 		m.table.SetDataSource(m.model)
 		m.table.SetDelegate(tableDelegate{onSelect: m.selectRow})
 		m.table.OnActivate(m.activate)
+		m.installContextMenu(root)
 		m.table.SetBackgroundColor(tokenColor(modernTheme.card))
 		m.table.SetCustomDraw(m.drawCell)
 		root.AddSubview(m.table)
