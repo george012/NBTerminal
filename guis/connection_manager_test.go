@@ -61,6 +61,50 @@ func TestConnectionManagerContextActionResolvesStableProfileAfterRowsChange(t *t
 	}
 }
 
+func TestQuickLauncherContextActionResolvesStableProfileAfterRowsChange(t *testing.T) {
+	app := &finalShellApp{rows: []connectionProfile{{ID: "alpha"}, {ID: "beta"}}, idx: 0}
+	if !app.selectQuickContextProfile("beta") || app.idx != 1 {
+		t.Fatalf("initial stable quick selection = %d, want 1", app.idx)
+	}
+	app.rows = []connectionProfile{{ID: "beta"}, {ID: "alpha"}}
+	app.idx = 1
+	if !app.selectQuickContextProfile("beta") || app.idx != 0 {
+		t.Fatalf("reordered stable quick selection = %d, want 0", app.idx)
+	}
+	if app.selectQuickContextProfile("missing") || app.idx != 0 {
+		t.Fatal("missing quick-launch profile changed selection")
+	}
+}
+
+func TestQuickLauncherFavoriteActionPersistsOnlyTargetProfile(t *testing.T) {
+	store := newConnectionStore(t.TempDir())
+	rows := []connectionProfile{
+		{ID: "alpha", Name: "Alpha", Group: "Local", Type: connectionTypeLocal},
+		{ID: "beta", Name: "Beta", Group: "Local", Type: connectionTypeLocal},
+	}
+	if err := store.SaveActive(rows, "alpha"); err != nil {
+		t.Fatalf("seed store: %v", err)
+	}
+	app := &finalShellApp{store: store, allRows: append([]connectionProfile(nil), rows...), rows: append([]connectionProfile(nil), rows...), idx: 1}
+	app.toggleSelectedProfileFavorite()
+	allBeta := indexProfileByID(app.allRows, "beta")
+	quickBeta := indexProfileByID(app.rows, "beta")
+	allAlpha := indexProfileByID(app.allRows, "alpha")
+	if allBeta < 0 || quickBeta < 0 || allAlpha < 0 || app.allRows[allAlpha].Favorite || !app.allRows[allBeta].Favorite || !app.rows[quickBeta].Favorite {
+		t.Fatalf("favorite state = all %#v quick %#v", app.allRows, app.rows)
+	}
+	reloaded := newConnectionStore(filepath.Dir(store.path))
+	if err := reloaded.Load(); err != nil {
+		t.Fatalf("reload store: %v", err)
+	}
+	persisted := reloaded.List()
+	persistedAlpha := indexProfileByID(persisted, "alpha")
+	persistedBeta := indexProfileByID(persisted, "beta")
+	if persistedAlpha < 0 || persistedBeta < 0 || persisted[persistedAlpha].Favorite || !persisted[persistedBeta].Favorite {
+		t.Fatalf("persisted favorite state = %#v", persisted)
+	}
+}
+
 func TestConnectionDeleteConfirmationIsLocalizedAndDefaultsToCancel(t *testing.T) {
 	previous := locales.CurrentLanguage()
 	t.Cleanup(func() { locales.ResetLocaleLanguage(previous.LanguageTag()) })

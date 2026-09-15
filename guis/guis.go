@@ -434,9 +434,10 @@ type finalShellApp struct {
 	quickPanel *uikit.UIGroup
 	// quickLaunchOverride temporarily replaces the active-session monitor when
 	// the user invokes the global quick-launch shortcut.
-	quickLaunchOverride bool
-	table               *uikit.UITableView
-	model               *tableModel
+	quickLaunchOverride   bool
+	table                 *uikit.UITableView
+	model                 *tableModel
+	connectionContextMenu *uikit.UIContextMenu
 
 	mainTitle           *uikit.UILabel
 	mainSubtitle        *uikit.UILabel
@@ -814,6 +815,7 @@ func (a *finalShellApp) build() {
 			}
 		}})
 		a.table.OnActivate(a.activateConnectionRow)
+		a.installQuickConnectionContextMenu(quickPanel)
 		a.table.SetBackgroundColor(tokenColor(modernTheme.card))
 		a.table.SetCustomDraw(a.drawConnectionCell)
 		a.table.ReloadData()
